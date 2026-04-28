@@ -1,0 +1,5 @@
+module ThorVGCpp {
+    header "../../inc/thorvg.h"
+    header "tvg_swift_helpers.h"
+    export *
+}
