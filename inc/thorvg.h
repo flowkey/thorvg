@@ -520,7 +520,8 @@ struct TVG_API Paint
      *
      * @since 0.4
      */
-    Matrix& transform() noexcept;
+    Matrix& transform() noexcept
+        __attribute__((swift_name("getTransform()")));
 
     /**
      * @brief Sets the opacity of the object.
@@ -887,7 +888,8 @@ struct TVG_API Fill
      *
      * @return The augmented transformation matrix.
      */
-    Matrix& transform() const noexcept;
+    Matrix& transform() const noexcept
+        __attribute__((swift_name("getTransform()")));
 
     /**
      * @brief Creates a copy of the Fill object.
@@ -1437,7 +1439,8 @@ struct TVG_API Shape : Paint
      *
      * @see strokeFill()
      */
-    Result strokeWidth(float width) noexcept;
+    Result strokeWidth(float width) noexcept
+        __attribute__((swift_name("setStrokeWidth(_:)")));
 
     /**
      * @brief Sets the stroke color for the path.
@@ -1457,7 +1460,8 @@ struct TVG_API Shape : Paint
      * @see strokeWidth()
      * @see strokeFill(Fill* f)
      */
-    Result strokeFill(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept;
+    Result strokeFill(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept
+        __attribute__((swift_name("setStrokeFill(r:g:b:a:)")));
 
     /**
      * @brief Sets the gradient fill of the stroke for all of the figures from the path.
@@ -1490,7 +1494,8 @@ struct TVG_API Shape : Paint
      *
      * @since 1.0
      */
-    Result strokeDash(const float* dashPattern, uint32_t cnt, float offset = 0.0f) noexcept;
+    Result strokeDash(const float* dashPattern, uint32_t cnt, float offset = 0.0f) noexcept
+        __attribute__((swift_name("setStrokeDash(_:_:offset:)")));
 
     /**
      * @brief Sets the cap style of the stroke in the open sub-paths.
@@ -1498,7 +1503,8 @@ struct TVG_API Shape : Paint
      * @param[in] cap The cap style value. The initial value is @c StrokeCap::Square.
      *
      */
-    Result strokeCap(StrokeCap cap) noexcept;
+    Result strokeCap(StrokeCap cap) noexcept
+        __attribute__((swift_name("setStrokeCap(_:)")));
 
     /**
      * @brief Sets the join style for stroked path segments.
@@ -1508,7 +1514,8 @@ struct TVG_API Shape : Paint
      * @param[in] join The join style value. The initial value is @c StrokeJoin::Bevel.
      *
      */
-    Result strokeJoin(StrokeJoin join) noexcept;
+    Result strokeJoin(StrokeJoin join) noexcept
+        __attribute__((swift_name("setStrokeJoin(_:)")));
 
     /**
      * @brief Sets the stroke miterlimit.
@@ -1547,7 +1554,8 @@ struct TVG_API Shape : Paint
      *
      * @note Either a solid color or a gradient fill is applied, depending on what was set as last.
      */
-    Result fill(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept;
+    Result fill(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept
+        __attribute__((swift_name("setFill(r:g:b:a:)")));
 
     /**
      * @brief Sets the gradient fill for all of the figures from the path.
@@ -1568,7 +1576,8 @@ struct TVG_API Shape : Paint
      *
      * @param[in] r The fill rule to apply to the shape.
      */
-    Result fillRule(FillRule r) noexcept;
+    Result fillRule(FillRule r) noexcept
+        __attribute__((swift_name("setFillRule(_:)")));
 
     /**
      * @brief Sets the rendering order of the stroke and the fill.
@@ -1612,7 +1621,8 @@ struct TVG_API Shape : Paint
      * @param[out] a The alpha channel value in the range [0 ~ 255], where 0 is completely transparent and 255 is opaque.
      *
      */
-    Result fill(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a = nullptr) const noexcept;
+    Result fill(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a = nullptr) const noexcept
+        __attribute__((swift_name("getFill(r:g:b:a:)")));
 
     /**
      * @brief Retrieves the current fill rule used by the shape.
@@ -1641,7 +1651,8 @@ struct TVG_API Shape : Paint
      * @param[out] a The alpha channel value in the range [0 ~ 255], where 0 is completely transparent and 255 is opaque.
      *
      */
-    Result strokeFill(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a = nullptr) const noexcept;
+    Result strokeFill(uint8_t* r, uint8_t* g, uint8_t* b, uint8_t* a = nullptr) const noexcept
+        __attribute__((swift_name("getStrokeFill(r:g:b:a:)")));
 
     /**
      * @brief Gets the pointer to the gradient fill of the stroke.
@@ -1776,7 +1787,8 @@ struct TVG_API Picture : Paint
      * @param[in] h A new height of the image in pixels.
      *
      */
-    Result size(float w, float h) noexcept;
+    Result size(float w, float h) noexcept
+        __attribute__((swift_name("setSize(_:_:)")));
 
     /**
      * @brief Gets the size of the image.
@@ -1785,7 +1797,8 @@ struct TVG_API Picture : Paint
      * @param[out] h The height of the image in pixels.
      *
      */
-    Result size(float* w, float* h) const noexcept;
+    Result size(float* w, float* h) const noexcept
+        __attribute__((swift_name("getSize(_:_:)")));
 
     /**
      * @brief Sets the normalized origin point of the Picture object.
@@ -2668,7 +2681,8 @@ struct TVG_API Initializer final
      *
      * @see Initializer::term()
      */
-    static Result init(uint32_t threads = 0) noexcept;
+    static Result init(uint32_t threads = 0) noexcept
+        __attribute__((swift_name("start(threads:)")));
 
     /**
      * @brief Terminates the ThorVG engine.

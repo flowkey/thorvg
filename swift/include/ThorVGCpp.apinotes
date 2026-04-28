@@ -1,0 +1,40 @@
+Name: ThorVGCpp
+Namespaces:
+- Name: tvg
+  Tags:
+  - Name: Paint
+    SwiftImportAs: reference
+    SwiftRetainOp: refPaint
+    SwiftReleaseOp: unrefPaint
+    Methods:
+    - Name: gen
+      SwiftReturnOwnership: unretained
+  - Name: Shape
+    SwiftImportAs: reference
+    SwiftRetainOp: refShape
+    SwiftReleaseOp: unrefShape
+    Methods:
+    - Name: gen
+      SwiftReturnOwnership: unretained
+  - Name: Scene
+    SwiftImportAs: reference
+    SwiftRetainOp: refScene
+    SwiftReleaseOp: unrefScene
+    Methods:
+    - Name: gen
+      SwiftReturnOwnership: unretained
+  - Name: Picture
+    SwiftImportAs: reference
+    SwiftRetainOp: refPicture
+    SwiftReleaseOp: unrefPicture
+    Methods:
+    - Name: gen
+      SwiftReturnOwnership: unretained
+  - Name: Canvas
+    SwiftImportAs: reference
+    SwiftRetainOp: immortal
+    SwiftReleaseOp: immortal
+  - Name: SwCanvas
+    SwiftImportAs: reference
+    SwiftRetainOp: immortal
+    SwiftReleaseOp: immortal
