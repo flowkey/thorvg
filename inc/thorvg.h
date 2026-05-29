@@ -1,6 +1,7 @@
 #ifndef _THORVG_H_
 #define _THORVG_H_
 
+#ifdef __cplusplus
 #include <cstdint>
 #include <functional>
 #include <list>
@@ -2813,4 +2814,5 @@ struct TVG_API Accessor
 
 } //namespace
 
+#endif // __cplusplus
 #endif //_THORVG_H_
