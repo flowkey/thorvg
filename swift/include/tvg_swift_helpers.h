@@ -1,5 +1,4 @@
 #pragma once
-#ifdef __cplusplus
 #include "../../inc/thorvg.h"
 
 #ifndef SWIFT_RETURNS_UNRETAINED
@@ -29,4 +28,3 @@ inline void unrefPicture(tvg::Picture* p) { p->unref(); }
 // Initializer and SwCanvas destructor aren't directly callable from Swift.
 inline void tvgInit() { tvg::Initializer::init(0); }
 inline void tvgCanvasDestroy(tvg::SwCanvas* c) { delete c; }
-#endif // __cplusplus
