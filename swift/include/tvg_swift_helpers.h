@@ -29,6 +29,7 @@ inline void unrefPicture(tvg::Picture* p) { p->unref(); }
 inline void tvgInit() { tvg::Initializer::init(0); }
 inline void tvgCanvasDestroy(tvg::SwCanvas* c) { delete c; }
 
-// Animation is not a ref-counted Paint — expose explicit lifetime helpers.
-inline tvg::Animation* tvgAnimationGen() SWIFT_RETURNS_UNRETAINED { return tvg::Animation::gen(); }
+// Animation is not a ref-counted Paint — Swift can call `tvg.Animation.gen()`
+// directly via the apinotes immortal-reference import, but the destructor needs
+// a free function (Swift cxx-interop can't call `delete` on an opaque pointer).
 inline void tvgAnimationDestroy(tvg::Animation* a) { delete a; }
