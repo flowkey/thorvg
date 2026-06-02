@@ -1,4 +1,0 @@
-module Cthorvg {
-    header "../../src/bindings/capi/thorvg_capi.h"
-    export *
-}

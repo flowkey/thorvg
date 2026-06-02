@@ -6,7 +6,6 @@ let package = Package(
     platforms: [.iOS(.v26), .macOS(.v13)],
     products: [
         .library(name: "ThorVGCpp", targets: ["ThorVGCpp"]),
-        .library(name: "Cthorvg", targets: ["Cthorvg"]),
     ],
     targets: [
         .target(
@@ -25,11 +24,10 @@ let package = Package(
                 "src/loaders/external_webp",
                 "src/loaders/lottie/jerryscript",
                 "src/loaders/lottie/meson.build",
-                "src/bindings/capi/meson.build",
+                "src/bindings/capi",
                 "src/renderer/gpu_engine",
                 "src/renderer/tvgInitializer.cpp",
                 "src/savers",
-                "swift/cinclude",
                 "meson.build",
                 "meson_options.txt",
                 "tvg-format.sh",
@@ -74,7 +72,6 @@ let package = Package(
                 "src/loaders/lottie/tvgLottieModifier.cpp",
                 "src/loaders/lottie/tvgLottieParser.cpp",
                 "src/loaders/lottie/tvgLottieParserHandler.cpp",
-                "src/bindings/capi/tvgCapi.cpp",
                 "swift/thorvg_initializer.cpp",
             ],
             publicHeadersPath: "swift/include",
@@ -92,15 +89,6 @@ let package = Package(
                 .headerSearchPath("src/loaders/lottie/rapidjson"),
                 .unsafeFlags(["-fno-exceptions", "-fno-rtti", "-w"]),
             ]
-        ),
-        // Header-only C wrapper module. Re-exports thorvg's C API
-        // (src/bindings/capi/thorvg_capi.h) so Swift consumers that don't enable
-        // C++ interop can still call into thorvg. Symbols are linked from ThorVGCpp.
-        .target(
-            name: "Cthorvg",
-            dependencies: ["ThorVGCpp"],
-            path: "swift/cinclude",
-            publicHeadersPath: "."
         ),
     ],
     cxxLanguageStandard: .cxx17
