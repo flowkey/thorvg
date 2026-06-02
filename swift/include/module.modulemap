@@ -1,5 +1,4 @@
 module ThorVGCpp {
-    requires cplusplus
     header "../../inc/thorvg.h"
     header "tvg_swift_helpers.h"
     export *
