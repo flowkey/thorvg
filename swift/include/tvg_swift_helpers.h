@@ -28,3 +28,7 @@ inline void unrefPicture(tvg::Picture* p) { p->unref(); }
 // Initializer and SwCanvas destructor aren't directly callable from Swift.
 inline void tvgInit() { tvg::Initializer::init(0); }
 inline void tvgCanvasDestroy(tvg::SwCanvas* c) { delete c; }
+
+// Animation is not a ref-counted Paint — expose explicit lifetime helpers.
+inline tvg::Animation* tvgAnimationGen() SWIFT_RETURNS_UNRETAINED { return tvg::Animation::gen(); }
+inline void tvgAnimationDestroy(tvg::Animation* a) { delete a; }

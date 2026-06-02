@@ -3,9 +3,10 @@ import PackageDescription
 
 let package = Package(
     name: "ThorVGPackage",
-    platforms: [.iOS(.v26), .macOS(.v26)],
+    platforms: [.iOS(.v26), .macOS(.v13)],
     products: [
         .library(name: "ThorVGCpp", targets: ["ThorVGCpp"]),
+        .library(name: "Cthorvg", targets: ["Cthorvg"]),
     ],
     targets: [
         .target(
@@ -15,7 +16,6 @@ let package = Package(
                 "test",
                 "tools",
                 "cross",
-                "src/loaders/lottie",
                 "src/loaders/svg",
                 "src/loaders/png",
                 "src/loaders/jpg",
@@ -23,9 +23,13 @@ let package = Package(
                 "src/loaders/external_png",
                 "src/loaders/external_jpg",
                 "src/loaders/external_webp",
+                "src/loaders/lottie/jerryscript",
+                "src/loaders/lottie/meson.build",
+                "src/bindings/capi/meson.build",
                 "src/renderer/gpu_engine",
                 "src/renderer/tvgInitializer.cpp",
                 "src/savers",
+                "swift/cinclude",
                 "meson.build",
                 "meson_options.txt",
                 "tvg-format.sh",
@@ -61,11 +65,22 @@ let package = Package(
                 "src/loaders/raw/tvgRawLoader.cpp",
                 "src/loaders/ttf/tvgTtfLoader.cpp",
                 "src/loaders/ttf/tvgTtfReader.cpp",
+                "src/loaders/lottie/tvgLottieAnimation.cpp",
+                "src/loaders/lottie/tvgLottieBuilder.cpp",
+                "src/loaders/lottie/tvgLottieExpressions.cpp",
+                "src/loaders/lottie/tvgLottieInterpolator.cpp",
+                "src/loaders/lottie/tvgLottieLoader.cpp",
+                "src/loaders/lottie/tvgLottieModel.cpp",
+                "src/loaders/lottie/tvgLottieModifier.cpp",
+                "src/loaders/lottie/tvgLottieParser.cpp",
+                "src/loaders/lottie/tvgLottieParserHandler.cpp",
+                "src/bindings/capi/tvgCapi.cpp",
                 "swift/thorvg_initializer.cpp",
             ],
             publicHeadersPath: "swift/include",
             cxxSettings: [
                 .define("TVG_STATIC"),
+                .define("THORVG_LOTTIE_LOADER_SUPPORT"),
                 .headerSearchPath("swift"),
                 .headerSearchPath("inc"),
                 .headerSearchPath("src/common"),
@@ -73,8 +88,19 @@ let package = Package(
                 .headerSearchPath("src/renderer/cpu_engine"),
                 .headerSearchPath("src/loaders/raw"),
                 .headerSearchPath("src/loaders/ttf"),
+                .headerSearchPath("src/loaders/lottie"),
+                .headerSearchPath("src/loaders/lottie/rapidjson"),
                 .unsafeFlags(["-fno-exceptions", "-fno-rtti", "-w"]),
             ]
+        ),
+        // Header-only C wrapper module. Re-exports thorvg's C API
+        // (src/bindings/capi/thorvg_capi.h) so Swift consumers that don't enable
+        // C++ interop can still call into thorvg. Symbols are linked from ThorVGCpp.
+        .target(
+            name: "Cthorvg",
+            dependencies: ["ThorVGCpp"],
+            path: "swift/cinclude",
+            publicHeadersPath: "."
         ),
     ],
     cxxLanguageStandard: .cxx17
