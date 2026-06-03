@@ -28,3 +28,8 @@ inline void unrefPicture(tvg::Picture* p) { p->unref(); }
 // Initializer and SwCanvas destructor aren't directly callable from Swift.
 inline void tvgInit() { tvg::Initializer::init(0); }
 inline void tvgCanvasDestroy(tvg::SwCanvas* c) { delete c; }
+
+// Animation is not a ref-counted Paint — Swift can call `tvg.Animation.gen()`
+// directly via the apinotes immortal-reference import, but the destructor needs
+// a free function (Swift cxx-interop can't call `delete` on an opaque pointer).
+inline void tvgAnimationDestroy(tvg::Animation* a) { delete a; }
