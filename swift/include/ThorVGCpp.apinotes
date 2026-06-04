@@ -38,3 +38,7 @@ Namespaces:
     SwiftImportAs: reference
     SwiftRetainOp: immortal
     SwiftReleaseOp: immortal
+  - Name: Animation
+    SwiftImportAs: reference
+    SwiftRetainOp: immortal
+    SwiftReleaseOp: immortal
