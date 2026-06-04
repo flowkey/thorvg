@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "ThorVGPackage",
-    platforms: [.iOS("15.6"), .macOS(.v13)],
+    platforms: [.iOS("v15.6"), .macOS(.v13)],
     products: [
         .library(name: "ThorVGCpp", targets: ["ThorVGCpp"]),
     ],
