@@ -33,3 +33,8 @@ inline void tvgCanvasDestroy(tvg::SwCanvas* c) { delete c; }
 // directly via the apinotes immortal-reference import, but the destructor needs
 // a free function (Swift cxx-interop can't call `delete` on an opaque pointer).
 inline void tvgAnimationDestroy(tvg::Animation* a) { delete a; }
+
+// Scene effect wrapper — Swift C++ interop cannot call variadic functions directly.
+inline tvg::Result tvgSceneAddGaussianBlur(tvg::Scene* s, double sigma, int direction, int border, int quality) {
+    return s->add(tvg::SceneEffect::GaussianBlur, sigma, direction, border, quality);
+}
