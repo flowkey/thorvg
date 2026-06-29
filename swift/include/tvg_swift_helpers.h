@@ -1,5 +1,6 @@
 #pragma once
 #include "../../inc/thorvg.h"
+#include <vector>
 
 #ifndef SWIFT_RETURNS_UNRETAINED
 #  if __has_attribute(swift_attr)
@@ -52,13 +53,11 @@ inline tvg::Shape* tvgMakeMaskedGradientRect(float x, float y, float w, float h,
     rect->appendRect(x, y, w, h);
     auto gradient = tvg::LinearGradient::gen();
     gradient->linear(x, y, x + w, y);
-    if (count > 16) count = 16;
-    tvg::Fill::ColorStop cs[16];
+    std::vector<tvg::Fill::ColorStop> cs(count);
     for (uint32_t i = 0; i < count; i++) {
-        cs[i].offset = stops[i].offset;
-        cs[i].r = stops[i].r; cs[i].g = stops[i].g; cs[i].b = stops[i].b; cs[i].a = stops[i].a;
+        cs[i] = { stops[i].offset, stops[i].r, stops[i].g, stops[i].b, stops[i].a };
     }
-    gradient->colorStops(cs, count);
+    gradient->colorStops(cs.data(), count);
     gradient->spread(tvg::FillSpread::Pad);
     rect->fill(gradient);
     // Alpha mask (not Intersect, which would paint the mask's own colour) keeps the gradient's colour
