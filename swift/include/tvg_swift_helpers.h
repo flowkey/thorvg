@@ -38,3 +38,31 @@ inline void tvgAnimationDestroy(tvg::Animation* a) { delete a; }
 inline tvg::Result tvgSceneAddGaussianBlur(tvg::Scene* s, double sigma, int direction, int border, int quality) {
     return s->add(tvg::SceneEffect::GaussianBlur, sigma, direction, border, quality);
 }
+
+// Builds a rectangle [x, x+w] × [y, y+h] filled with a horizontal linear gradient, optionally masked
+// to `maskScene`'s alpha (MaskMethod::Alpha) so the gradient shows only where the mask is opaque while
+// keeping its own colour. Building the Fill/LinearGradient here keeps it off Swift, whose cxx-interop
+// can't construct gradients or disambiguate mask()'s getter/setter overload. Returns an unretained Shape.
+struct TvgGradientStop { float offset; uint8_t r, g, b, a; };
+
+inline tvg::Shape* tvgMakeMaskedGradientRect(float x, float y, float w, float h,
+                                             const TvgGradientStop* stops, uint32_t count,
+                                             tvg::Scene* maskScene) SWIFT_RETURNS_UNRETAINED {
+    auto rect = tvg::Shape::gen();
+    rect->appendRect(x, y, w, h);
+    auto gradient = tvg::LinearGradient::gen();
+    gradient->linear(x, y, x + w, y);
+    if (count > 16) count = 16;
+    tvg::Fill::ColorStop cs[16];
+    for (uint32_t i = 0; i < count; i++) {
+        cs[i].offset = stops[i].offset;
+        cs[i].r = stops[i].r; cs[i].g = stops[i].g; cs[i].b = stops[i].b; cs[i].a = stops[i].a;
+    }
+    gradient->colorStops(cs, count);
+    gradient->spread(tvg::FillSpread::Pad);
+    rect->fill(gradient);
+    // Alpha mask (not Intersect, which would paint the mask's own colour) keeps the gradient's colour
+    // and shows it only where the mask is opaque.
+    if (maskScene) rect->mask(static_cast<tvg::Paint*>(maskScene), tvg::MaskMethod::Alpha);
+    return rect;
+}
