@@ -66,7 +66,9 @@ namespace tvg
 
     struct StrictKey : Key
     {
-        std::mutex mtx;
+#ifndef __wasi__
+        std::mutex mtx;   // single-threaded WASI libc++ has no std::mutex
+#endif
     };
 
     struct ScopedLock
@@ -77,13 +79,17 @@ namespace tvg
 
         ScopedLock(StrictKey& k)
         {
+#ifndef __wasi__
             k.mtx.lock();
             key = &k;
+#endif
         }
 
         ~ScopedLock()
         {
+#ifndef __wasi__
             if (key) key->mtx.unlock();
+#endif
         }
     };
 #endif //THORVG_THREAD_SUPPORT
