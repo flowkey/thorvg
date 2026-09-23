@@ -34,7 +34,13 @@
 /************************************************************************/
 
 static int32_t _rendererCnt = -1;
+#ifdef __STDCPP_THREADS__
 static mutex _rendererMtx;
+#else
+// libc++ built without threads (e.g. single-threaded WASI) has no std::mutex. A no-op
+// lockable keeps the existing lock()/unlock() call sites valid without introducing threads.
+static struct { void lock() {} void unlock() {} } _rendererMtx;
+#endif
 
 struct SwTask : Task
 {
