@@ -9,10 +9,10 @@
 #define THORVG_CAPI_BINDING_SUPPORT 1
 #define THORVG_FILE_IO_SUPPORT 1
 
-// The task scheduler needs std::thread. Toolchains whose C++ library has no threads
-// (for example single-threaded WASI) leave __STDCPP_THREADS__ undefined.
-// Define THORVG_NO_THREAD_SUPPORT to build the single-threaded variant anywhere.
-#if defined(__STDCPP_THREADS__) && !defined(THORVG_NO_THREAD_SUPPORT)
+// The task scheduler (worker threads inside ThorVG) is off: callers parallelise by drawing
+// one canvas per thread. THORVG_ENABLE_THREAD_SUPPORT, set by the TaskScheduler trait, turns
+// it on where the C++ library has threads; single-threaded WASI leaves __STDCPP_THREADS__ undefined.
+#if defined(THORVG_ENABLE_THREAD_SUPPORT) && defined(__STDCPP_THREADS__)
 #define THORVG_THREAD_SUPPORT 1
 #endif
 

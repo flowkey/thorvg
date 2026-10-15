@@ -33,6 +33,7 @@ func implementationSettings(targetDirectory: String) -> [CXXSetting] {
         // ThorVG would otherwise replace operator new/delete for the whole host program.
         .define("THORVG_NO_GLOBAL_OPERATOR_NEW"),
         .define("THORVG_GL_ENGINE_SUPPORT", to: "1", .when(traits: ["OpenGL"])),
+        .define("THORVG_ENABLE_THREAD_SUPPORT", .when(traits: ["TaskScheduler"])),
         .unsafeFlags(["-fno-exceptions", "-fno-rtti", "-w"]),
     ] + headerSearchPaths(fromTargetDirectory: targetDirectory)
 }
@@ -50,6 +51,10 @@ let package = Package(
         .trait(
             name: "OpenGL",
             description: "Adds the OpenGL engine (tvg::GlCanvas). libGL is loaded at runtime with dlopen, so there is no link-time dependency."
+        ),
+        .trait(
+            name: "TaskScheduler",
+            description: "Builds ThorVG's task scheduler, so Initializer::init(threads) starts worker threads. Without it every canvas renders on the calling thread."
         ),
     ],
     targets: [
@@ -149,6 +154,7 @@ let package = Package(
             cxxSettings: [
                 .define("TVG_STATIC"),
                 .define("TEST_DIR", to: "\"\(packageDirectory)/test/resources\""),
+                .define("THORVG_ENABLE_THREAD_SUPPORT", .when(traits: ["TaskScheduler"])),
                 .headerSearchPath("../swift"),
                 .headerSearchPath("../inc"),
                 .headerSearchPath("../src/loaders/lottie"),
