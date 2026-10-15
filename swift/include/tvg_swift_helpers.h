@@ -27,6 +27,8 @@ inline void unrefPicture(tvg::Picture* p) { p->unref(); }
 
 // Initializer and SwCanvas destructor aren't directly callable from Swift.
 inline void tvgInit() { tvg::Initializer::init(0); }
+// Releases one tvgInit() reference; the engine terminates when the last one is released.
+inline tvg::Result tvgTerm() { return tvg::Initializer::term(); }
 inline void tvgCanvasDestroy(tvg::SwCanvas* c) { delete c; }
 
 // Animation is not a ref-counted Paint — Swift can call `tvg.Animation.gen()`
