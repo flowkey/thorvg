@@ -34,6 +34,7 @@ static StrictKey _rendererMtx;
 struct SwTask : Task
 {
     SwRenderer* renderer;
+    SwSurface* surface;        //target surface at preparation. The renderer switches its surface while drawing compositions.
     RenderRegion clipBox;      //clipping region applied to the task, may differ from curBox which is the actual rendering region
     RenderRegion curBox{};     //current rendering region
     RenderRegion prvBox{};     //previous rendering region
@@ -143,7 +144,7 @@ struct SwShapeTask : SwTask
         }
         //Fill
         if (updateFill) {
-            if (!fillPrepare(shape.fill, rshape->fill, transform, renderer->surface, opacity, (flags[0] & RenderUpdateFlag::Gradient))) goto dismiss;
+            if (!fillPrepare(shape.fill, rshape->fill, transform, surface, opacity, (flags[0] & RenderUpdateFlag::Gradient))) goto dismiss;
         }
         //Stroke
         if (strokeWidth > 0.0f) {
@@ -151,7 +152,7 @@ struct SwShapeTask : SwTask
             if (updateStroke && !shapeGenStrokeRle(shape, rshape, transform, clipBox, curBox, renderer->mpool, tid, renderer->antiAlias)) goto dismiss;
             auto ctable = flags[0] & RenderUpdateFlag::GradientStroke;
             if (ctable || flags[0] & RenderUpdateFlag::Transform) {
-                if (!fillPrepare(shape.stroke->fill, rshape->strokeFill(), transform, renderer->surface, opacity, ctable)) goto dismiss;
+                if (!fillPrepare(shape.stroke->fill, rshape->strokeFill(), transform, surface, opacity, ctable)) goto dismiss;
             }
         } else {
             shapeDelStroke(shape);
@@ -198,7 +199,7 @@ struct SwImageTask : SwTask
     void run(unsigned tid) override
     {
         //Convert colorspace if it's not aligned.
-        rasterConvertCS(source, renderer->surface->cs);
+        rasterConvertCS(source, surface->cs);
         rasterPremultiplySurface(source);
 
         image.data = source->data;
@@ -858,6 +859,7 @@ SwTask* SwRenderer::prepareCommon(SwTask* task, const Matrix& transform, const A
     if (task->disposed) return task;
 
     task->renderer = this;
+    task->surface = surface;
     task->clipBox = RenderRegion::intersect(vport, {0, 0, int32_t(surface->w), int32_t(surface->h)});
     task->transform = transform;
     task->clips = clips;
