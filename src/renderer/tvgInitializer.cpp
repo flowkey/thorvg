@@ -43,10 +43,10 @@
 /************************************************************************/
 
 namespace tvg {
-    int engineInit = 0;
+    std::atomic<int> engineInit{0};
 }
 
-static uint16_t _version = 0;
+static std::atomic<uint16_t> _version{0};  //Initializer::version() may rebuild it on any thread
 static StrictKey _key;
 
 static bool _buildVersionInfo(uint32_t* major, uint32_t* minor, uint32_t* micro)

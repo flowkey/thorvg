@@ -32,6 +32,7 @@
         #include <windows.h>
     #endif
 #endif
+#include <atomic>
 #include <string>
 #include <cstdint>
 #include <cstdlib>
@@ -104,7 +105,7 @@ namespace tvg
 
     uint16_t THORVG_VERSION_NUMBER();
 
-    extern int engineInit;
+    extern std::atomic<int> engineInit;  //written under the initializer lock, read by canvas generation on any thread
 }
 
 #include "tvgAllocator.h"

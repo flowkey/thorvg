@@ -199,6 +199,27 @@ TEST_CASE("Rendering after another thread terminated the engine", "[tvgConcurren
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+TEST_CASE("Rendering while other threads start and stop the engine", "[tvgConcurrency]")
+{
+    REQUIRE(Initializer::init(0) == Result::Success);
+    auto references = renderReferences();
+
+    //Every thread holds its own engine reference around each frame, as independent libraries would.
+    auto failures = runConcurrently([&](uint32_t threadIndex) {
+        if (Initializer::init(0) != Result::Success) return false;
+        auto rendered = false;
+        {
+            auto canvas = unique_ptr<SwCanvas>(SwCanvas::gen());
+            Pixels pixels;
+            uint32_t major, minor, micro;
+            rendered = canvas && Initializer::version(&major, &minor, &micro) && render(canvas.get(), threadIndex, pixels) && pixels == references[threadIndex];
+        }
+        return Initializer::term() == Result::Success && rendered;
+    });
+    REQUIRE(failures == 0);
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
 
 //Pictures that borrow the same pixels share one cached loader across all canvases.
 static void buildPictureScene(Canvas* canvas, const vector<uint32_t>& image, uint32_t imageSize, uint32_t variant)
