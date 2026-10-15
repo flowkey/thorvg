@@ -67,7 +67,8 @@ uintptr_t HASH_KEY(const char* data)
 // TODO: remove it.
 atomic<ColorSpace> BitmapLoader::cs{ColorSpace::ARGB8888};
 
-static Key _key;
+//The cache is shared by every canvas and thread, including when the task scheduler has no threads.
+static StrictKey _key;
 static Inlist<tvg::Loader> _activeLoaders;
 
 static tvg::Loader* _find(FileType type)
@@ -201,6 +202,7 @@ bool LoaderMgr::init()
 bool LoaderMgr::term()
 {
     // force clean up the font loaders which is globally used.
+    ScopedLock lock(_key);
     INLIST_SAFE_FOREACH(_activeLoaders, loader) {
         if (loader->type != FileType::Sfnt) continue;
         _activeLoaders.remove(loader);
@@ -213,10 +215,18 @@ bool LoaderMgr::retrieve(Loader* loader)
 {
     if (!loader) return false;
 
-    if (loader->close()) {
+    //release the last reference and leave the cache together, so no lookup can revive the loader.
+    {
+        ScopedLock lock(_key);
+        if (loader->sharing > 0) {
+            --loader->sharing;
+            return true;
+        }
         if (loader->cached) _activeLoaders.remove(loader);
-        delete (loader);
     }
+
+    //close() may wait for the loader's own tasks, which may load resources through the cache.
+    if (loader->close()) delete (loader);
     return true;
 }
 

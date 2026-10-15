@@ -198,4 +198,59 @@ TEST_CASE("Rendering after another thread terminated the engine", "[tvgConcurren
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+
+//Pictures that borrow the same pixels share one cached loader across all canvases.
+static void buildPictureScene(Canvas* canvas, const vector<uint32_t>& image, uint32_t imageSize, uint32_t variant)
+{
+    for (uint32_t pictureIndex = 0; pictureIndex < 6; ++pictureIndex) {
+        auto picture = Picture::gen();
+        picture->load(image.data(), imageSize, imageSize, ColorSpace::ARGB8888, false);
+        picture->translate(float(pictureIndex * 30 + variant * 3), float(pictureIndex * 20));
+        picture->scale(0.5f + 0.25f * float((pictureIndex + variant) % 4));
+        canvas->add(picture);
+    }
+}
+
+TEST_CASE("Concurrent loading of a shared image", "[tvgConcurrency]")
+{
+    constexpr uint32_t imageSize = 64;
+    vector<uint32_t> image(imageSize * imageSize);
+    for (uint32_t pixelIndex = 0; pixelIndex < image.size(); ++pixelIndex) {
+        auto x = pixelIndex % imageSize;
+        auto y = pixelIndex / imageSize;
+        image[pixelIndex] = 0xff000000 | ((x * 4) << 16) | ((y * 4) << 8) | ((x ^ y) & 0xff);
+    }
+
+    auto renderPictures = [&](SwCanvas* canvas, uint32_t variant, Pixels& pixels) {
+        pixels.assign(CANVAS_SIZE * CANVAS_SIZE, 0);
+        if (canvas->target(pixels.data(), CANVAS_SIZE, CANVAS_SIZE, CANVAS_SIZE, ColorSpace::ARGB8888) != Result::Success) return false;
+        buildPictureScene(canvas, image, imageSize, variant);
+        auto drawn = canvas->draw(true) == Result::Success && canvas->sync() == Result::Success;
+        canvas->remove();
+        return drawn;
+    };
+
+    for (uint32_t workerThreads : {0u, 4u}) {
+        REQUIRE(Initializer::init(workerThreads) == Result::Success);
+        {
+            vector<Pixels> references(APPLICATION_THREADS);
+            {
+                auto canvas = unique_ptr<SwCanvas>(SwCanvas::gen());
+                for (uint32_t variant = 0; variant < APPLICATION_THREADS; ++variant) {
+                    REQUIRE(renderPictures(canvas.get(), variant, references[variant]));
+                }
+            }
+
+            auto failures = runConcurrently([&](uint32_t threadIndex) {
+                auto canvas = unique_ptr<SwCanvas>(SwCanvas::gen());
+                Pixels pixels;
+                if (!canvas || !renderPictures(canvas.get(), threadIndex, pixels)) return false;
+                return pixels == references[threadIndex];
+            });
+            REQUIRE(failures == 0);
+        }
+        REQUIRE(Initializer::term() == Result::Success);
+    }
+}
+
 #endif
