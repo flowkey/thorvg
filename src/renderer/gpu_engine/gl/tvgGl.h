@@ -1179,6 +1179,11 @@
         typedef unsigned int (*PFNEGLMAKECURRENTPROC)(EGLDisplay dpy, EGLSurface draw, EGLSurface read, EGLContext ctx);
     #endif
 
+    // The loaded entry points live in their own namespace. Variables named exactly like the GL
+    // functions (glGenFramebuffers, ...) would be global symbols that shadow the real functions
+    // when ThorVG is linked statically into a program that calls GL itself.
+    namespace tvg { namespace glprocs {
+
     //GL_VERSION_1_0
     extern PFNGLCULLFACEPROC               glCullFace;
     extern PFNGLFRONTFACEPROC              glFrontFace;
@@ -1499,6 +1504,9 @@
     //extern PFNGLGETACTIVEUNIFORMNAMEPROC      glGetActiveUniformName;
     //extern PFNGLGETACTIVEUNIFORMBLOCKIVPROC   glGetActiveUniformBlockiv;
     //extern PFNGLGETACTIVEUNIFORMBLOCKNAMEPROC glGetActiveUniformBlockName;
+
+    }}
+    using namespace tvg::glprocs;
 
     #if defined(_WIN32) && !defined(__CYGWIN__) && defined(THORVG_GL_TARGET_GL)
         extern PFNWGLGETCURRENTCONTEXTPROC  tvgWglGetCurrentContext;

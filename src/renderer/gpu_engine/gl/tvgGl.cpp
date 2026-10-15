@@ -168,6 +168,9 @@ static void* _getProcAddress(const char* procName)
 /* External Class Implementation                                        */
 /************************************************************************/
 
+// The function pointers live in a namespace; see tvgGl.h.
+namespace tvg { namespace glprocs {
+
 //GL_VERSION_1_0
 PFNGLCULLFACEPROC               glCullFace;
 PFNGLFRONTFACEPROC              glFrontFace;
@@ -487,6 +490,8 @@ PFNGLUNIFORMBLOCKBINDINGPROC       glUniformBlockBinding;
 //PFNGLGETACTIVEUNIFORMNAMEPROC      glGetActiveUniformName;
 //PFNGLGETACTIVEUNIFORMBLOCKIVPROC   glGetActiveUniformBlockiv;
 //PFNGLGETACTIVEUNIFORMBLOCKNAMEPROC glGetActiveUniformBlockName;
+
+}}
 
 #if defined(_WIN32) && !defined(__CYGWIN__) && defined(THORVG_GL_TARGET_GL)
     PFNWGLGETCURRENTCONTEXTPROC  tvgWglGetCurrentContext;
