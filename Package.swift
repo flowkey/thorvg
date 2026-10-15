@@ -12,6 +12,7 @@ let implementationHeaderDirectories = [
     "src/renderer/cpu_engine",
     "src/renderer/gpu_engine",
     "src/renderer/gpu_engine/gl",
+    "src/renderer/gpu_engine/wg",
     "src/loaders/raw",
     "src/loaders/sfnt",
     "src/loaders/lottie",
@@ -33,6 +34,7 @@ func implementationSettings(targetDirectory: String) -> [CXXSetting] {
         // ThorVG would otherwise replace operator new/delete for the whole host program.
         .define("THORVG_NO_GLOBAL_OPERATOR_NEW"),
         .define("THORVG_GL_ENGINE_SUPPORT", to: "1", .when(traits: ["OpenGL"])),
+        .define("THORVG_WG_ENGINE_SUPPORT", to: "1", .when(traits: ["WebGPU"])),
         .define("THORVG_ENABLE_THREAD_SUPPORT", .when(traits: ["TaskScheduler"])),
         .unsafeFlags(["-fno-exceptions", "-fno-rtti", "-w"]),
     ] + headerSearchPaths(fromTargetDirectory: targetDirectory)
@@ -53,6 +55,10 @@ let package = Package(
             description: "Adds the OpenGL engine (tvg::GlCanvas). libGL is loaded at runtime with dlopen, so there is no link-time dependency."
         ),
         .trait(
+            name: "WebGPU",
+            description: "Adds the WebGPU engine (tvg::WgCanvas). Needs webgpu/webgpu.h and its implementation through pkg-config `wgpu_native` (wgpu-native, or any library that provides the same header and a wgpu_native.pc)."
+        ),
+        .trait(
             name: "TaskScheduler",
             description: "Builds ThorVG's task scheduler, so Initializer::init(threads) starts worker threads. Without it every canvas renders on the calling thread."
         ),
@@ -62,6 +68,8 @@ let package = Package(
             name: "ThorVGCpp",
             dependencies: [
                 .target(name: "ThorVGGLEngine", condition: .when(traits: ["OpenGL"])),
+                .target(name: "ThorVGWGEngine", condition: .when(traits: ["WebGPU"])),
+                .target(name: "CWebGPU", condition: .when(traits: ["WebGPU"])),
             ],
             path: ".",
             sources: [
@@ -122,14 +130,42 @@ let package = Package(
             cxxSettings: implementationSettings(targetDirectory: "swift/ThorVGC")
         ),
 
+        // Code shared by the OpenGL and WebGPU engines.
+        .target(
+            name: "ThorVGGPUCommon",
+            path: "src/renderer/gpu_engine",
+            sources: ["tvgGpuCommon.cpp"],
+            publicHeadersPath: ".",
+            cxxSettings: implementationSettings(targetDirectory: "src/renderer/gpu_engine")
+        ),
+
         .target(
             name: "ThorVGGLEngine",
-            path: "src/renderer/gpu_engine",
-            exclude: ["meson.build", "gl/meson.build", "wg"],
-            publicHeadersPath: "gl",
-            cxxSettings: implementationSettings(targetDirectory: "src/renderer/gpu_engine") + [
+            dependencies: ["ThorVGGPUCommon"],
+            path: "src/renderer/gpu_engine/gl",
+            exclude: ["meson.build"],
+            publicHeadersPath: ".",
+            cxxSettings: implementationSettings(targetDirectory: "src/renderer/gpu_engine/gl") + [
                 .define("THORVG_GL_ENGINE_SUPPORT", to: "1"),
                 .define("THORVG_GL_TARGET_GL", to: "1"),
+            ]
+        ),
+
+        // webgpu/webgpu.h and the library implementing it, found through pkg-config.
+        .systemLibrary(
+            name: "CWebGPU",
+            path: "swift/CWebGPU",
+            pkgConfig: "wgpu_native"
+        ),
+
+        .target(
+            name: "ThorVGWGEngine",
+            dependencies: ["ThorVGGPUCommon", "CWebGPU"],
+            path: "src/renderer/gpu_engine/wg",
+            exclude: ["meson.build"],
+            publicHeadersPath: ".",
+            cxxSettings: implementationSettings(targetDirectory: "src/renderer/gpu_engine/wg") + [
+                .define("THORVG_WG_ENGINE_SUPPORT", to: "1"),
             ]
         ),
 
@@ -137,21 +173,23 @@ let package = Package(
         // swift run -c release ThorVGTests
         .executableTarget(
             name: "ThorVGTests",
-            dependencies: ["ThorVGCpp"],
+            dependencies: [
+                "ThorVGCpp",
+                .target(name: "CWebGPU", condition: .when(traits: ["WebGPU"])),
+            ],
             path: "test",
             exclude: [
                 "meson.build",
                 "regression",
                 "resources",
-                // The GL tests compile to nothing unless THORVG_GL_TEST_SUPPORT is defined (OpenGL trait).
-                "testWgCanvas.cpp",
-                "testWgEngine.cpp",
             ],
             cxxSettings: [
                 .define("TVG_STATIC"),
                 .define("TEST_DIR", to: "\"\(packageDirectory)/test/resources\""),
                 .define("THORVG_ENABLE_THREAD_SUPPORT", .when(traits: ["TaskScheduler"])),
+                // testGl*.cpp and testWg*.cpp compile to nothing without these.
                 .define("THORVG_GL_TEST_SUPPORT", .when(traits: ["OpenGL"])),
+                .define("THORVG_WG_TEST_SUPPORT", .when(traits: ["WebGPU"])),
                 .headerSearchPath("../swift"),
                 .headerSearchPath("../inc"),
                 .headerSearchPath("../src/loaders/lottie"),

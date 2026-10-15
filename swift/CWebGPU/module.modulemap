@@ -1,0 +1,4 @@
+module CWebGPU [system] {
+    header "CWebGPU.h"
+    export *
+}
