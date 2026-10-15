@@ -10,6 +10,8 @@ let implementationHeaderDirectories = [
     "src/common",
     "src/renderer",
     "src/renderer/cpu_engine",
+    "src/renderer/gpu_engine",
+    "src/renderer/gpu_engine/gl",
     "src/loaders/raw",
     "src/loaders/sfnt",
     "src/loaders/lottie",
@@ -30,6 +32,7 @@ func implementationSettings(targetDirectory: String) -> [CXXSetting] {
         .define("TVG_STATIC"),
         // ThorVG would otherwise replace operator new/delete for the whole host program.
         .define("THORVG_NO_GLOBAL_OPERATOR_NEW"),
+        .define("THORVG_GL_ENGINE_SUPPORT", to: "1", .when(traits: ["OpenGL"])),
         .unsafeFlags(["-fno-exceptions", "-fno-rtti", "-w"]),
     ] + headerSearchPaths(fromTargetDirectory: targetDirectory)
 }
@@ -43,9 +46,18 @@ let package = Package(
         // ThorVG's C API (`tvg_*` functions), importable without C++ interoperability.
         .library(name: "ThorVGC", targets: ["ThorVGC"]),
     ],
+    traits: [
+        .trait(
+            name: "OpenGL",
+            description: "Adds the OpenGL engine (tvg::GlCanvas). libGL is loaded at runtime with dlopen, so there is no link-time dependency."
+        ),
+    ],
     targets: [
         .target(
             name: "ThorVGCpp",
+            dependencies: [
+                .target(name: "ThorVGGLEngine", condition: .when(traits: ["OpenGL"])),
+            ],
             path: ".",
             sources: [
                 "src/common/tvgCompressor.cpp",
@@ -105,6 +117,17 @@ let package = Package(
             cxxSettings: implementationSettings(targetDirectory: "swift/ThorVGC")
         ),
 
+        .target(
+            name: "ThorVGGLEngine",
+            path: "src/renderer/gpu_engine",
+            exclude: ["meson.build", "gl/meson.build", "wg"],
+            publicHeadersPath: "gl",
+            cxxSettings: implementationSettings(targetDirectory: "src/renderer/gpu_engine") + [
+                .define("THORVG_GL_ENGINE_SUPPORT", to: "1"),
+                .define("THORVG_GL_TARGET_GL", to: "1"),
+            ]
+        ),
+
         // ThorVG's Catch2 unit tests for the engines and loaders built above:
         // swift run -c release ThorVGTests
         .executableTarget(
@@ -115,6 +138,9 @@ let package = Package(
                 "meson.build",
                 "regression",
                 "resources",
+                // The GL engine defines global function pointers named after the GL entry points
+                // (glGenFramebuffers, ...). Linked statically next to OpenGL they shadow the real
+                // functions, so the GL tests cannot run in this package.
                 "testGlCanvas.cpp",
                 "testGlEngine.cpp",
                 "testWgCanvas.cpp",
