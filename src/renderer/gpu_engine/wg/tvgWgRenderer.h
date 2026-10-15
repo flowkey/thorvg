@@ -93,6 +93,7 @@ private:
 
     void clearTargets();
     void surfaceConfigure(RenderSurface& rsurface, WGPUSurface wsurface, WgContext& context);
+    static WGPUTextureFormat targetFormat(const WgCanvas::Context& ctx, void* target, int type);
 
     RenderSurface mSurface;  // main surface
     WgRenderTarget mRenderTargetRoot;

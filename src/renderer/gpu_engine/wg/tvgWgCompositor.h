@@ -106,6 +106,8 @@ private:
     void updateViewMat(WgContext& context, uint32_t width, uint32_t height);
 public:
     void initialize(WgContext& context, uint32_t width, uint32_t height);
+    // recreates the pipelines that write the target, after WgContext::format changed
+    void updateTargetFormat(WgContext& context) { pipelines.updateTargetFormat(context); }
     void initPools(WgContext& context);
     void release(WgContext& context);
     void releasePools(WgContext& context);

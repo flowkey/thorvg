@@ -84,6 +84,8 @@ struct WgPipelines
     WGPURenderPipeline sceneBlend(WgContext& context, BlendMethod method);
     void initialize(WgContext& context);
     void release(WgContext& context);
+    // recreates the pipelines that write the target, after WgContext::format changed
+    void updateTargetFormat(WgContext& context);
 
 private:
     // shaders helpers
@@ -140,6 +142,7 @@ private:
                                             WGPUTextureFormat colorTargetFormat, WGPUBlendState blendState, WGPUDepthStencilState depthStencilState, WGPUMultisampleState multisampleState);
     WGPURenderPipeline createBlendPipeline(WgContext& context, const char* pipelineLabel, WGPUShaderModule shaderModule, const char* fsEntryPoint, WGPUPipelineLayout pipelineLayout,
                                            WGPUVertexBufferLayout* vertexBufferLayouts, const uint32_t vertexBufferLayoutsCount, WGPUCompareFunction stencilCompare);
+    void createBlitPipelines(WgContext& context);
     void releaseRenderPipeline(WGPURenderPipeline& renderPipeline);
     void releasePipelineLayout(WGPUPipelineLayout& pipelineLayout);
     void releaseShaderModule(WGPUShaderModule& shaderModule);

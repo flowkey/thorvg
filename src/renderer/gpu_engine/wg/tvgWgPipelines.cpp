@@ -246,6 +246,32 @@ WGPUDepthStencilState WgPipelines::makeDepthStencilState(
     return depthStencilState;
 }
 
+void WgPipelines::createBlitPipelines(WgContext& context)
+{
+    const WGPUMultisampleState multisampleStateX1{nullptr, 1, 0xFFFFFFFF, false};
+    WGPUBlendComponent blendComponentSrc{WGPUBlendOperation_Add, WGPUBlendFactor_One, WGPUBlendFactor_Zero};
+    const WGPUBlendState blendStateSrc{blendComponentSrc, blendComponentSrc};
+    const WGPUDepthStencilState depthStencilStateScene = makeDepthStencilState(WGPUCompareFunction_Always, WGPUOptionalBool_False,  WGPUCompareFunction_Always, WGPUStencilOperation_Zero);
+
+    blit = createRenderPipeline(context.device, "The render pipeline blit", shaderBlit, "vs_main", "fs_main", layoutBlit, vertexBufferLayoutsImage, 2,
+                                WGPUColorWriteMask_All, context.format, blendStateSrc,  // the target's format
+                                depthStencilStateScene, multisampleStateX1);
+
+    // TODO: either premultiplied blit or unpremultplied bit used.
+    blitUnpremultiplied = createRenderPipeline(context.device, "The render pipeline blit unpremultiplied", shaderBlit, "vs_main", "fs_main_unpremultiplied", layoutBlit, vertexBufferLayoutsImage, 2,
+                                               WGPUColorWriteMask_All, context.format, blendStateSrc,  // the target's format
+                                               depthStencilStateScene, multisampleStateX1);
+}
+
+
+void WgPipelines::updateTargetFormat(WgContext& context)
+{
+    releaseRenderPipeline(blitUnpremultiplied);
+    releaseRenderPipeline(blit);
+    createBlitPipelines(context);
+}
+
+
 void WgPipelines::initialize(WgContext& context)
 {
     // common pipeline settings
@@ -428,14 +454,7 @@ void WgPipelines::initialize(WgContext& context)
                                                WGPUColorWriteMask_All, offscreenTargetFormat, composeBlends[i], depthStencilStateScene, multisampleState);
     }
 
-    blit = createRenderPipeline(context.device, "The render pipeline blit", shaderBlit, "vs_main", "fs_main", layoutBlit, vertexBufferLayoutsImage, 2,
-                                WGPUColorWriteMask_All, context.format, blendStateSrc,  // must be preferred screen pixel format
-                                depthStencilStateScene, multisampleStateX1);
-
-    // TODO: either premultiplied blit or unpremultplied bit used.
-    blitUnpremultiplied = createRenderPipeline(context.device, "The render pipeline blit unpremultiplied", shaderBlit, "vs_main", "fs_main_unpremultiplied", layoutBlit, vertexBufferLayoutsImage, 2,
-                                               WGPUColorWriteMask_All, context.format, blendStateSrc,  // must be preferred screen pixel format
-                                               depthStencilStateScene, multisampleStateX1);
+    createBlitPipelines(context);
 
     // effects
     effectMotionBlur = createRenderPipeline(context.device, "The render pipeline motion blur", shaderEffects, "vs_main", "fs_main_motion", layoutEffects, vertexBufferLayoutsImage, 2,

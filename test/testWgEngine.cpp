@@ -138,6 +138,40 @@ TEST_CASE("WG Basic draw", "[tvgWgEngine]")
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+TEST_CASE("WG Texture Target Formats", "[tvgWgEngine]")
+{
+    REQUIRE(Initializer::init() == Result::Success);
+    {
+        // RGBA8Unorm is the presentable format of most Android Vulkan surfaces.
+        WGPUTextureFormat formats[] = {WGPUTextureFormat_BGRA8Unorm, WGPUTextureFormat_RGBA8Unorm};
+        for (auto format : formats) {
+            TestWgEngine engine(16, 16, ColorSpace::ABGR8888, format);
+            auto canvas = unique_ptr<WgCanvas>(WgCanvas::gen());
+            REQUIRE(canvas);
+            REQUIRE(engine.target(canvas.get()) == Result::Success);
+
+            auto shape = Shape::gen();
+            REQUIRE(shape->appendRect(0, 0, 16, 16) == Result::Success);
+            REQUIRE(shape->fill(255, 0, 0, 255) == Result::Success);
+            REQUIRE(canvas->add(shape) == Result::Success);
+            REQUIRE(canvas->draw(true) == Result::Success);
+            REQUIRE(canvas->sync() == Result::Success);
+
+            auto pixels = engine.readPixels();
+            REQUIRE(pixels.size() == 16 * 16);
+            uint8_t texel[4];
+            memcpy(texel, &pixels[8 * 16 + 8], 4);
+            auto red = (format == WGPUTextureFormat_RGBA8Unorm) ? texel[0] : texel[2];
+            auto blue = (format == WGPUTextureFormat_RGBA8Unorm) ? texel[2] : texel[0];
+            REQUIRE(red == 255);
+            REQUIRE(texel[1] == 0);
+            REQUIRE(blue == 0);
+            REQUIRE(texel[3] == 255);
+        }
+    }
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
 TEST_CASE("WG Image Draw", "[tvgWgEngine]")
 {
     TestWgEngine engine;
@@ -484,6 +518,60 @@ TEST_CASE("WG Scene Effects", "[tvgWgEngine]")
         REQUIRE(canvas->update() == Result::Success);
         REQUIRE(canvas->draw() == Result::Success);
         REQUIRE(canvas->sync() == Result::Success);
+    }
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
+TEST_CASE("WG Target Format Change", "[tvgWgEngine]")
+{
+    TestWgEngine engine;
+
+    REQUIRE(Initializer::init() == Result::Success);
+    {
+        auto canvas = unique_ptr<WgCanvas>(WgCanvas::gen());
+        REQUIRE(canvas);
+
+        // a second target of the same size in the other 8-bit format
+        WGPUTextureDescriptor textureDesc = {};
+        textureDesc.usage = WGPUTextureUsage_CopySrc | WGPUTextureUsage_RenderAttachment;
+        textureDesc.dimension = WGPUTextureDimension_2D;
+        textureDesc.size = {engine.width, engine.height, 1};
+        textureDesc.format = WGPUTextureFormat_RGBA8Unorm;
+        textureDesc.mipLevelCount = 1;
+        textureDesc.sampleCount = 1;
+        auto rgbaTexture = wgpuDeviceCreateTexture(engine.device, &textureDesc);
+        REQUIRE(rgbaTexture);
+
+        auto shape = Shape::gen();
+        REQUIRE(shape->appendRect(10, 10, 50, 50, 5, 5) == Result::Success);
+        REQUIRE(shape->fill(255, 0, 0) == Result::Success);
+        REQUIRE(canvas->add(shape) == Result::Success);
+
+        // the prepared shape stays valid while the canvas moves between target formats
+        WgCanvas::Context context{engine.instance, engine.adapter, engine.device};
+        WGPUTexture targets[] = {engine.texture, rgbaTexture, engine.texture, rgbaTexture};
+        for (auto target : targets) {
+            REQUIRE(canvas->target(context, target, engine.width, engine.height, ColorSpace::ABGR8888, 1) == Result::Success);
+            REQUIRE(shape->translate(1, 1) == Result::Success);
+            REQUIRE(canvas->update() == Result::Success);
+            REQUIRE(canvas->draw(true) == Result::Success);
+            REQUIRE(canvas->sync() == Result::Success);
+
+            // red inside the shape, in the byte order of the target's format
+            auto pixels = engine.readPixels(target);
+            REQUIRE(pixels.size() == engine.width * engine.height);
+            uint8_t texel[4];
+            memcpy(texel, &pixels[35 * engine.width + 35], 4);
+            auto rgba = (target == rgbaTexture);
+            REQUIRE(texel[rgba ? 0 : 2] == 255);
+            REQUIRE(texel[1] == 0);
+            REQUIRE(texel[rgba ? 2 : 0] == 0);
+            REQUIRE(texel[3] == 255);
+        }
+
+        REQUIRE(canvas->target(context, nullptr, 0, 0, ColorSpace::ABGR8888, 1) == Result::Success);
+        wgpuTextureDestroy(rgbaTexture);
+        wgpuTextureRelease(rgbaTexture);
     }
     REQUIRE(Initializer::term() == Result::Success);
 }

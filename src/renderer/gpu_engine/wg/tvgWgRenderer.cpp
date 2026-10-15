@@ -501,6 +501,31 @@ bool WgRenderer::sync()
     return true;
 }
 
+WGPUTextureFormat WgRenderer::targetFormat(const WgCanvas::Context& ctx, void* target, int type)
+{
+    // texture: its own format
+    if (type != 0) return wgpuTextureGetFormat((WGPUTexture)target);
+
+    // surface: the first 8-bit unorm format in the adapter's order of preference, so presentation needs no extra
+    // copy (browsers on Linux and Android, and Vulkan surfaces on Android, prefer or only offer RGBA8Unorm).
+    // A surface that offers neither gets its preferred format; without an adapter, BGRA8Unorm.
+    auto format = WGPUTextureFormat_BGRA8Unorm;
+    if (ctx.adapter) {
+        WGPUSurfaceCapabilities capabilities{};
+        if (wgpuSurfaceGetCapabilities((WGPUSurface)target, (WGPUAdapter)ctx.adapter, &capabilities) == WGPUStatus_Success) {
+            if (capabilities.formatCount > 0) format = capabilities.formats[0];
+            for (size_t i = 0; i < capabilities.formatCount; ++i) {
+                if (capabilities.formats[i] == WGPUTextureFormat_BGRA8Unorm || capabilities.formats[i] == WGPUTextureFormat_RGBA8Unorm) {
+                    format = capabilities.formats[i];
+                    break;
+                }
+            }
+            wgpuSurfaceCapabilitiesFreeMembers(capabilities);
+        }
+    }
+    return format;
+}
+
 Result WgRenderer::target(const WgCanvas::Context& ctx, void* target, uint32_t w, uint32_t h, ColorSpace cs, int type)
 {
     auto opaque = (cs == ColorSpace::XBGR8888);
@@ -516,21 +541,32 @@ Result WgRenderer::target(const WgCanvas::Context& ctx, void* target, uint32_t w
 
     if (opaque) cs = ColorSpace::ABGR8888;  // Opaque surface composition uses the internal ABGR format.
 
+    // The final blit pipeline writes the target's own format.
+    auto format = targetFormat(ctx, target, type);
+
     // context has been changed, need to recreate all instances
     if ((mContext.device != ctx.device) || (mContext.instance != ctx.instance) || mContext.adapter != ctx.adapter) {
         release();
+        mContext.format = format;
         mContext.initialize(ctx);
         mRenderTargetPool.initialize(w, h);
         mRenderTargetRoot.initialize(mContext, w, h);
         mCompositor.initialize(mContext, w, h);
-    // update render targets dimensions
-    } else if ((mSurface.w != w) || (mSurface.h != h) || (type == 0 ? (surface != (WGPUSurface)target) : (targetTexture != (WGPUTexture)target))) {
-        mRenderTargetPool.release(mContext);
-        mRenderTargetRoot.release(mContext);
-        clearTargets();
-        mRenderTargetPool.initialize(w, h);
-        mRenderTargetRoot.initialize(mContext, w, h);
-        mCompositor.resize(mContext, w, h);
+    } else {
+        // only the final blit depends on the target format, so prepared paints stay valid
+        if (mContext.format != format) {
+            mContext.format = format;
+            mCompositor.updateTargetFormat(mContext);
+        }
+        // update render targets dimensions
+        if ((mSurface.w != w) || (mSurface.h != h) || (type == 0 ? (surface != (WGPUSurface)target) : (targetTexture != (WGPUTexture)target))) {
+            mRenderTargetPool.release(mContext);
+            mRenderTargetRoot.release(mContext);
+            clearTargets();
+            mRenderTargetPool.initialize(w, h);
+            mRenderTargetRoot.initialize(mContext, w, h);
+            mCompositor.resize(mContext, w, h);
+        }
     }
 
     mSurface.stride = w;
