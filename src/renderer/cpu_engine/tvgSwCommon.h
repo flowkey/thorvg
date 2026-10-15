@@ -529,9 +529,8 @@ bool rleClip(SwRle* rle, const SwRle* clip);
 bool rleClip(SwRle* rle, const RenderRegion* clip);
 bool rleIntersect(const SwRle* rle, const RenderRegion& region);
 
-void mpoolInit(uint32_t threads);
-void mpoolTerm();
-SwMpool* mpoolReq();
+SwMpool* mpoolReq(uint32_t threads);
+void mpoolRetrieve(SwMpool* mpool);
 
 void rasterInit();
 Result rasterCompositor(SwSurface* surface);

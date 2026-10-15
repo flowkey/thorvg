@@ -23,38 +23,16 @@
 #include "tvgSwCommon.h"
 
 /************************************************************************/
-/* Internal Class Implementation                                        */
-/************************************************************************/
-
-static thread_local SwMpool* _pool = nullptr;
-static Array<SwMpool*> _pools;
-static uint32_t _threads = 0;
-static StrictKey _key;
-
-/************************************************************************/
 /* External Class Implementation                                        */
 /************************************************************************/
 
-SwMpool* mpoolReq()
+//Each renderer owns its pool, so renderers driven by different threads never share scratch memory.
+SwMpool* mpoolReq(uint32_t threads)
 {
-    if (!_pool) {
-        _pool = new SwMpool(_threads);
-        ScopedLock lock(_key);
-        _pools.push(_pool);
-    }
-    return _pool;
+    return new SwMpool(threads);
 }
 
-void mpoolInit(uint32_t threads)
+void mpoolRetrieve(SwMpool* mpool)
 {
-    _threads = threads;
-}
-
-void mpoolTerm()
-{
-    for (auto p : _pools) {
-        delete p;
-        _pool = nullptr;
-    }
-    _pools.reset();
+    delete(mpool);
 }

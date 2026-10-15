@@ -249,6 +249,8 @@ SwRenderer::~SwRenderer()
 
     delete(surface);
 
+    mpoolRetrieve(mpool);
+
     _rendererMtx.lock();
     --_rendererCnt;
     _rendererMtx.unlock();
@@ -918,8 +920,6 @@ bool SwRenderer::term()
         return false;
     }
 
-    mpoolTerm();
-
     _rendererCnt = -1;
     _rendererMtx.unlock();
 
@@ -936,13 +936,12 @@ SwRenderer::SwRenderer(uint32_t threads, EngineOption op)
         omp_set_num_threads(threads);
 #endif
         rasterInit();
-        mpoolInit(threads);
         _rendererCnt = 0;
     }
     ++_rendererCnt;
     _rendererMtx.unlock();
 
-    mpool = mpoolReq();
+    mpool = mpoolReq(threads);
 
     auto byDefault = (op == EngineOption::Default);
     dirtyRegion.support = (byDefault || (op & EngineOption::SmartRender));

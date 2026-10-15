@@ -12,6 +12,7 @@ endif
 test_file = [
     'testAccessor.cpp',
     'testAnimation.cpp',
+    'testConcurrency.cpp',
     'testFill.cpp',
     'testInitializer.cpp',
     'testLottie.cpp',
