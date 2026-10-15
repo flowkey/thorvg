@@ -138,6 +138,10 @@ uint16_t THORVG_VERSION_NUMBER()
 }
 
 
+//The global allocation operators are replaced for the whole program, not only for ThorVG.
+//Embedders that link ThorVG statically into a host with its own allocator may opt out.
+#ifndef THORVG_NO_GLOBAL_OPERATOR_NEW
+
 void* operator new(std::size_t size)
 {
     return tvg::malloc(size);
@@ -160,3 +164,5 @@ void operator delete[](void* ptr) noexcept
 {
     tvg::free(ptr);
 }
+
+#endif //THORVG_NO_GLOBAL_OPERATOR_NEW
