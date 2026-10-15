@@ -14,6 +14,7 @@ let implementationHeaderDirectories = [
     "src/loaders/sfnt",
     "src/loaders/lottie",
     "src/loaders/lottie/rapidjson",
+    "src/bindings/capi",
 ]
 
 /// The implementation header search paths, rewritten relative to a target directory.
@@ -37,7 +38,10 @@ let package = Package(
     name: "ThorVGPackage",
     platforms: [.iOS("15.6"), .macOS(.v13)],
     products: [
+        // ThorVG's C++ API (namespace `tvg`) for Swift C++ interoperability.
         .library(name: "ThorVGCpp", targets: ["ThorVGCpp"]),
+        // ThorVG's C API (`tvg_*` functions), importable without C++ interoperability.
+        .library(name: "ThorVGC", targets: ["ThorVGC"]),
     ],
     targets: [
         .target(
@@ -92,6 +96,13 @@ let package = Package(
             ],
             publicHeadersPath: "swift/include",
             cxxSettings: implementationSettings(targetDirectory: ".")
+        ),
+
+        .target(
+            name: "ThorVGC",
+            dependencies: ["ThorVGCpp"],
+            path: "swift/ThorVGC",
+            cxxSettings: implementationSettings(targetDirectory: "swift/ThorVGC")
         ),
 
         // ThorVG's Catch2 unit tests for the engines and loaders built above:

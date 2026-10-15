@@ -1,0 +1,4 @@
+module ThorVGC {
+    header "../../../src/bindings/capi/thorvg_capi.h"
+    export *
+}

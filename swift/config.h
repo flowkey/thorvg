@@ -6,6 +6,7 @@
 #define THORVG_TTF_LOADER_SUPPORT 1
 #define THORVG_OTF_LOADER_SUPPORT 1
 #define THORVG_LOTTIE_LOADER_SUPPORT 1
+#define THORVG_CAPI_BINDING_SUPPORT 1
 #define THORVG_FILE_IO_SUPPORT 1
 
 // The task scheduler needs std::thread. Toolchains whose C++ library has no threads
