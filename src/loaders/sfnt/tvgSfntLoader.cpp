@@ -510,6 +510,7 @@ Result SfntLoader::gen(uint8_t* data, uint32_t size, SfntReader*& out)
 
 void SfntLoader::transform(Paint* paint, FontMetrics& fm, float italicShear)
 {
+    ScopedLock lock(key);
     auto engine = static_cast<SfntMetrics*>(fm.engine);
     auto scale = 1.0f / fm.scale;
     auto baseWidth = (engine->baseGlyph) ? engine->baseGlyph->bbox.w() : 0.0f;
@@ -571,6 +572,8 @@ bool SfntLoader::get(FontMetrics& fm, char* text, uint32_t len, RenderPath& out)
     auto box = fm.box * fm.scale;
     auto end = text + len;
 
+    ScopedLock lock(key);
+
     if (fm.wrap == TextWrap::None || fm.box.x == 0.0f) wrapNone(fm, box, text, end, out);
     else if (fm.wrap == TextWrap::Character) wrapChar(fm, box, text, end, out);
     else if (fm.wrap == TextWrap::Word) wrapWord(fm, box, text, end, out, false);
@@ -610,6 +613,7 @@ void SfntLoader::metrics(const FontMetrics& fm, TextMetrics& out)
 bool SfntLoader::metrics(const FontMetrics& fm, const char* ch, GlyphMetrics& out, const char** next)
 {
     auto code = _codepoints(&ch, ch + strlen(ch));
+    ScopedLock lock(key);
     auto glyph = request(code);
     if (!glyph) return false;
 

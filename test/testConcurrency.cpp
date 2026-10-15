@@ -23,6 +23,7 @@
 #include <thorvg.h>
 #include <atomic>
 #include <cstring>
+#include <fstream>
 #include <memory>
 #include <vector>
 #include "config.h"
@@ -252,5 +253,76 @@ TEST_CASE("Concurrent loading of a shared image", "[tvgConcurrency]")
         REQUIRE(Initializer::term() == Result::Success);
     }
 }
+
+
+#ifdef THORVG_SFNT_LOADER_SUPPORT
+
+//Every Text that names the font uses the one loader registered by Text::load(), on every thread.
+static bool renderText(SwCanvas* canvas, const char* fontName, uint32_t variant, Pixels& pixels)
+{
+    static const char* sentences[] = {
+        "The quick brown fox jumps over the lazy dog 0123456789",
+        "Sphinx of black quartz, judge my vow! @#$%^&*()",
+        "Pack my box with five dozen liquor jugs; ~`{}[]|",
+        "How vexingly quick daft zebras jump: ABCDEFGHIJKLM",
+    };
+
+    pixels.assign(CANVAS_SIZE * CANVAS_SIZE, 0);
+    if (canvas->target(pixels.data(), CANVAS_SIZE, CANVAS_SIZE, CANVAS_SIZE, ColorSpace::ARGB8888) != Result::Success) return false;
+    for (uint32_t lineIndex = 0; lineIndex < 8; ++lineIndex) {
+        auto text = Text::gen();
+        if (text->font(fontName) != Result::Success) {
+            Paint::rel(text);
+            return false;
+        }
+        text->size(10.0f + float((lineIndex + variant) % 5) * 3.0f);
+        text->text(sentences[(lineIndex + variant) % 4]);
+        text->fill(uint8_t(lineIndex * 30), uint8_t(variant * 30), 120);
+        text->translate(4.0f, float(lineIndex * 30));
+        canvas->add(text);
+    }
+    auto drawn = canvas->draw(true) == Result::Success && canvas->sync() == Result::Success;
+    canvas->remove();
+    return drawn;
+}
+
+TEST_CASE("Concurrent text rendering with a shared font", "[tvgConcurrency]")
+{
+    for (uint32_t workerThreads : {0u, 4u}) {
+        REQUIRE(Initializer::init(workerThreads) == Result::Success);
+
+        ifstream file(TEST_DIR"/PublicSans-Regular.ttf", ios::binary | ios::ate);
+        REQUIRE(file.is_open());
+        vector<char> fontData(size_t(file.tellg()));
+        file.seekg(0);
+        file.read(fontData.data(), fontData.size());
+
+        //The references fill the glyph cache of one font, the threads start from the empty cache of another.
+        auto referenceFont = workerThreads ? "ReferenceSansThreaded" : "ReferenceSans";
+        auto sharedFont = workerThreads ? "SharedSansThreaded" : "SharedSans";
+        REQUIRE(Text::load(referenceFont, fontData.data(), uint32_t(fontData.size()), "ttf", true) == Result::Success);
+        REQUIRE(Text::load(sharedFont, fontData.data(), uint32_t(fontData.size()), "ttf", true) == Result::Success);
+
+        vector<Pixels> references(APPLICATION_THREADS);
+        {
+            auto canvas = unique_ptr<SwCanvas>(SwCanvas::gen());
+            for (uint32_t variant = 0; variant < APPLICATION_THREADS; ++variant) {
+                REQUIRE(renderText(canvas.get(), referenceFont, variant, references[variant]));
+            }
+        }
+
+        auto failures = runConcurrently([&](uint32_t threadIndex) {
+            auto canvas = unique_ptr<SwCanvas>(SwCanvas::gen());
+            Pixels pixels;
+            if (!canvas || !renderText(canvas.get(), sharedFont, threadIndex, pixels)) return false;
+            return pixels == references[threadIndex];
+        });
+        REQUIRE(failures == 0);
+
+        REQUIRE(Initializer::term() == Result::Success);
+    }
+}
+
+#endif
 
 #endif

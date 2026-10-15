@@ -23,6 +23,7 @@
 #define _TVG_SFNT_LOADER_H_
 
 #include "tvgMap.h"
+#include "tvgLock.h"
 #include "tvgLoader.h"
 #include "tvgTaskScheduler.h"
 #include "tvgSfntReader.h"
@@ -40,6 +41,7 @@ struct SfntLoader : public FontLoader
     void* mapping = nullptr;
 #endif
     Map<uint32_t, SfntGlyphMetrics> glyphs;  // glyph cache. key: codepoint
+    StrictKey key;  // the loader is shared by every Text using the font, on any thread. guards the glyph cache.
     SfntReader* reader = nullptr;
     char* text = nullptr;
     bool nomap = false;
