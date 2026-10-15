@@ -172,6 +172,72 @@ TEST_CASE("WG Texture Target Formats", "[tvgWgEngine]")
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+static Scene* _translationScene()
+{
+    auto scene = Scene::gen();
+
+    auto fill = Shape::gen();
+    fill->appendCircle(40, 30, 22, 14);
+    fill->appendRect(70, 10, 20, 40, 4, 4);
+    fill->fill(20, 40, 200, 255);
+    scene->add(fill);
+
+    auto stroke = Shape::gen();
+    stroke->moveTo(10, 60);
+    stroke->lineTo(50, 90);
+    stroke->lineTo(90, 60);
+    stroke->strokeWidth(3);
+    stroke->strokeFill(200, 30, 30, 255);
+    scene->add(stroke);
+
+    auto both = Shape::gen();
+    both->appendRect(20, 100, 60, 12);
+    both->fill(0, 160, 60, 255);
+    both->strokeWidth(2);
+    both->strokeFill(0, 0, 0, 255);
+    scene->add(both);
+
+    return scene;
+}
+
+TEST_CASE("WG Translation-only update matches a fresh render", "[tvgWgEngine]")
+{
+    REQUIRE(Initializer::init() == Result::Success);
+    {
+        TestWgEngine moved(160, 160);
+        TestWgEngine fresh(160, 160);
+        auto movedCanvas = unique_ptr<WgCanvas>(WgCanvas::gen());
+        auto freshCanvas = unique_ptr<WgCanvas>(WgCanvas::gen());
+        REQUIRE(moved.target(movedCanvas.get()) == Result::Success);
+        REQUIRE(fresh.target(freshCanvas.get()) == Result::Success);
+
+        // Drawn at the origin first, then moved: the meshes are reused and translated.
+        auto movedScene = _translationScene();
+        REQUIRE(movedCanvas->add(movedScene) == Result::Success);
+        REQUIRE(movedCanvas->draw(true) == Result::Success);
+        REQUIRE(movedCanvas->sync() == Result::Success);
+        REQUIRE(movedScene->translate(13.25f, 27.5f) == Result::Success);
+        REQUIRE(movedCanvas->update() == Result::Success);
+        REQUIRE(movedCanvas->draw(true) == Result::Success);
+        REQUIRE(movedCanvas->sync() == Result::Success);
+
+        // Built at the final position from scratch.
+        auto freshScene = _translationScene();
+        REQUIRE(freshScene->translate(13.25f, 27.5f) == Result::Success);
+        REQUIRE(freshCanvas->add(freshScene) == Result::Success);
+        REQUIRE(freshCanvas->draw(true) == Result::Success);
+        REQUIRE(freshCanvas->sync() == Result::Success);
+
+        auto movedPixels = moved.readPixels();
+        auto freshPixels = fresh.readPixels();
+        uint32_t covered = 0;
+        for (auto pixel : freshPixels) covered += (pixel >> 24) ? 1 : 0;
+        REQUIRE(covered > 1000);
+        REQUIRE(movedPixels == freshPixels);
+    }
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
 TEST_CASE("WG Image Draw", "[tvgWgEngine]")
 {
     TestWgEngine engine;

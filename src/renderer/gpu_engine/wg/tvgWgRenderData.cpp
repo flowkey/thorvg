@@ -130,8 +130,48 @@ void WgShape::update(const RenderShape& rshape, const RenderRegion& vport, uint8
     viewport = vport;
 }
 
+static void _translate(Array<Point>& points, const Point& offset)
+{
+    ARRAY_FOREACH(point, points) {
+        point->x += offset.x;
+        point->y += offset.y;
+    }
+}
+
+static void _translate(BBox& box, const Point& offset)
+{
+    box.min.x += offset.x;
+    box.min.y += offset.y;
+    box.max.x += offset.x;
+    box.max.y += offset.y;
+}
+
+// When only the translation of the transform changed, the fill mesh is moved instead of being
+// rebuilt: tessellation, stroking and the thin-path decisions depend on the linear part only.
+// Fill meshes and the shape bounds are in target coordinates; stroke meshes are in local
+// coordinates (the compositor applies the transform), so they stay as they are.
+bool WgShape::translate(const Matrix& newTransform, RenderUpdateFlag flag)
+{
+    if (flag & ~(RenderUpdateFlag::Transform | RenderUpdateFlag::Color | RenderUpdateFlag::Clip)) return false;
+    if (shape.mesh.vbuffer.empty() && stroke.mesh.vbuffer.empty()) return false;
+    if (!tvg::equal(transform.e11, newTransform.e11) || !tvg::equal(transform.e12, newTransform.e12) ||
+        !tvg::equal(transform.e21, newTransform.e21) || !tvg::equal(transform.e22, newTransform.e22) ||
+        !tvg::equal(transform.e31, newTransform.e31) || !tvg::equal(transform.e32, newTransform.e32) ||
+        !tvg::equal(transform.e33, newTransform.e33)) return false;
+
+    const Point offset = {newTransform.e13 - transform.e13, newTransform.e23 - transform.e23};
+    clips.clear();
+    _translate(shape.mesh.vbuffer, offset);
+    _translate(bboxMesh.vbuffer, offset);
+    if (!shape.mesh.vbuffer.empty()) _translate(shape.bbox, offset);
+    _translate(bbox, offset);
+    return true;
+}
+
 void WgShape::update(const RenderShape& rshape, const Matrix& transform, RenderUpdateFlag flag)
 {
+    if (translate(transform, flag)) return;
+
     reset();  // Optimize: bad idea to reset meshes always. it could re-use the meshes if there haven't been any path changes.
 
     convex = false;
