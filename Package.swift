@@ -143,11 +143,7 @@ let package = Package(
                 "meson.build",
                 "regression",
                 "resources",
-                // The GL engine defines global function pointers named after the GL entry points
-                // (glGenFramebuffers, ...). Linked statically next to OpenGL they shadow the real
-                // functions, so the GL tests cannot run in this package.
-                "testGlCanvas.cpp",
-                "testGlEngine.cpp",
+                // The GL tests compile to nothing unless THORVG_GL_TEST_SUPPORT is defined (OpenGL trait).
                 "testWgCanvas.cpp",
                 "testWgEngine.cpp",
             ],
@@ -155,6 +151,7 @@ let package = Package(
                 .define("TVG_STATIC"),
                 .define("TEST_DIR", to: "\"\(packageDirectory)/test/resources\""),
                 .define("THORVG_ENABLE_THREAD_SUPPORT", .when(traits: ["TaskScheduler"])),
+                .define("THORVG_GL_TEST_SUPPORT", .when(traits: ["OpenGL"])),
                 .headerSearchPath("../swift"),
                 .headerSearchPath("../inc"),
                 .headerSearchPath("../src/loaders/lottie"),
@@ -162,6 +159,9 @@ let package = Package(
             ],
             linkerSettings: [
                 .linkedLibrary("pthread", .when(platforms: [.linux])),
+                // The GL tests create their context themselves: CGL and GL on macOS, EGL on Linux.
+                .linkedFramework("OpenGL", .when(platforms: [.macOS], traits: ["OpenGL"])),
+                .linkedLibrary("EGL", .when(platforms: [.linux], traits: ["OpenGL"])),
             ]
         ),
     ],
