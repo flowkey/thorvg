@@ -642,4 +642,58 @@ TEST_CASE("WG Target Format Change", "[tvgWgEngine]")
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+
+TEST_CASE("WG Detached Target Keeps Paints", "[tvgWgEngine]")
+{
+    TestWgEngine engine(64, 64);
+
+    REQUIRE(Initializer::init() == Result::Success);
+    {
+        auto canvas = unique_ptr<WgCanvas>(WgCanvas::gen());
+        REQUIRE(canvas);
+        WgCanvas::Context context{engine.instance, engine.adapter, engine.device};
+
+        // a first target that the host destroys after detaching the canvas from it
+        WGPUTextureDescriptor textureDesc = {};
+        textureDesc.usage = WGPUTextureUsage_CopySrc | WGPUTextureUsage_RenderAttachment;
+        textureDesc.dimension = WGPUTextureDimension_2D;
+        textureDesc.size = {engine.width, engine.height, 1};
+        textureDesc.format = engine.format;
+        textureDesc.mipLevelCount = 1;
+        textureDesc.sampleCount = 1;
+        auto firstTexture = wgpuDeviceCreateTexture(engine.device, &textureDesc);
+        REQUIRE(firstTexture);
+
+        auto shape = Shape::gen();
+        REQUIRE(shape->appendRect(8, 8, 32, 32) == Result::Success);
+        REQUIRE(shape->fill(255, 0, 0) == Result::Success);
+        REQUIRE(canvas->add(shape) == Result::Success);
+
+        REQUIRE(canvas->target(context, firstTexture, engine.width, engine.height, ColorSpace::ABGR8888, 1) == Result::Success);
+        REQUIRE(canvas->draw(true) == Result::Success);
+        REQUIRE(canvas->sync() == Result::Success);
+
+        // detach with the same context, then destroy the old target
+        REQUIRE(canvas->target(context, nullptr, 0, 0, ColorSpace::ABGR8888, 1) == Result::Success);
+        wgpuTextureDestroy(firstTexture);
+        wgpuTextureRelease(firstTexture);
+
+        // the prepared shape draws into the next target without being added again
+        REQUIRE(engine.target(canvas.get()) == Result::Success);
+        REQUIRE(canvas->update() == Result::Success);
+        REQUIRE(canvas->draw(true) == Result::Success);
+        REQUIRE(canvas->sync() == Result::Success);
+
+        auto pixels = engine.readPixels();
+        REQUIRE(pixels.size() == engine.width * engine.height);
+        uint8_t inside[4], outside[4];
+        memcpy(inside, &pixels[20 * engine.width + 20], 4);
+        memcpy(outside, &pixels[50 * engine.width + 50], 4);
+        REQUIRE(inside[2] == 255);  // BGRA8: red is the third byte
+        REQUIRE(inside[3] == 255);
+        REQUIRE(outside[3] == 0);
+    }
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
 #endif

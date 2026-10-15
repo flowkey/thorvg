@@ -532,8 +532,17 @@ Result WgRenderer::target(const WgCanvas::Context& ctx, void* target, uint32_t w
     if (cs != ColorSpace::ABGR8888 && cs != ColorSpace::ABGR8888S && !opaque) return Result::NonSupport;
     if (opaque && type != 0) return Result::InvalidArguments;
 
-    if (!ctx.instance || !ctx.device || !target) {
+    if (!ctx.instance || !ctx.device) {
         release();
+        return Result::Success;
+    }
+
+    // No target with the same context: only the target is forgotten (a surface is unconfigured). The
+    // context stays, and so does the GPU data of the prepared paints, which a release would free while
+    // the paints still point at it. The canvas can then be pointed at a new target without loading again.
+    if (!target) {
+        if ((mContext.device == ctx.device) && (mContext.instance == ctx.instance)) clearTargets();
+        else release();
         return Result::Success;
     }
 
