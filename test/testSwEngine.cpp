@@ -444,4 +444,48 @@ TEST_CASE("Stroke outlines left of the target", "[tvgSwEngine]")
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+
+TEST_CASE("Translucent fills independent of the target's alignment", "[tvgSwEngine]")
+{
+    //A translucent span blends every pixel with the same rounding, whether the pixel is 8-byte aligned or not, so
+    //a picture drawn into a target that starts one pixel later in memory, or a partial redraw whose spans start
+    //elsewhere, gives the same pixels.
+    REQUIRE(Initializer::init() == Result::Success);
+    {
+        auto render = [](uint32_t* buffer) {
+            auto canvas = unique_ptr<SwCanvas>(SwCanvas::gen());
+            REQUIRE(canvas->target(buffer, 32, 32, 32, ColorSpace::ABGR8888) == Result::Success);
+            auto background = Shape::gen();
+            REQUIRE(background->appendRect(0, 0, 32, 32) == Result::Success);
+            REQUIRE(background->fill(200, 150, 100, 255) == Result::Success);
+            REQUIRE(canvas->add(background) == Result::Success);
+            auto rect = Shape::gen();
+            REQUIRE(rect->appendRect(3, 2, 21, 9) == Result::Success);
+            REQUIRE(rect->fill(10, 220, 90, 77) == Result::Success);
+            REQUIRE(canvas->add(rect) == Result::Success);
+            auto circle = Shape::gen();
+            REQUIRE(circle->appendCircle(17.3f, 20.6f, 9.1f, 8.7f) == Result::Success);
+            REQUIRE(circle->fill(250, 30, 60, 101) == Result::Success);
+            REQUIRE(canvas->add(circle) == Result::Success);
+            REQUIRE(canvas->draw() == Result::Success);
+            REQUIRE(canvas->sync() == Result::Success);
+        };
+
+        alignas(8) uint32_t alignedStorage[32 * 32] = {};
+        alignas(8) uint32_t shiftedStorage[32 * 32 + 1] = {};
+        render(alignedStorage);
+        render(shiftedStorage + 1);
+
+        auto differing = 0;
+        for (auto index = 0; index < 32 * 32; ++index) {
+            if (alignedStorage[index] != shiftedStorage[index + 1]) ++differing;
+        }
+        REQUIRE(differing == 0);
+        //Translucent paint over an opaque background stays opaque.
+        REQUIRE((alignedStorage[4 * 32 + 5] >> 24) == 255);
+        REQUIRE((alignedStorage[20 * 32 + 17] >> 24) == 255);
+    }
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
 #endif

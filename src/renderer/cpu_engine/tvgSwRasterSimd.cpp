@@ -363,9 +363,10 @@ void avxRasterGaussianXYFlipBlock(const uint32_t* src, uint32_t* dst, int32_t st
     #define TVG_AARCH64 0
 #endif
 
+//c * (a + 1) >> 8 per channel, the rounding of the scalar ALPHA_BLEND that blends the unaligned head and the odd tail of a span
 static uint8x8_t ALPHA_BLEND(uint8x8_t c, uint8x8_t a)
 {
-    return vshrn_n_u16(vmull_u8(c, a), 8);
+    return vshrn_n_u16(vaddw_u8(vmull_u8(c, a), c), 8);
 }
 
 static uint8x8_t neonScalePixels(uint8x8_t pixels, uint32x2_t factors)
