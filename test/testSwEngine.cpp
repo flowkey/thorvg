@@ -407,4 +407,41 @@ TEST_CASE("Intersection", "[tvgSwEngine]")
     REQUIRE(Initializer::term() == Result::Success);
 }
 
+TEST_CASE("Stroke outlines left of the target", "[tvgSwEngine]")
+{
+    //A stroke drawn into a target whose origin lies inside it must cover the same pixels as the same stroke
+    //drawn whole-pixel-shifted into a wider target, so tiles of one picture match a single render of it.
+    REQUIRE(Initializer::init() == Result::Success);
+    {
+        auto render = [](uint32_t* buffer, uint32_t width, float shift) {
+            auto canvas = unique_ptr<SwCanvas>(SwCanvas::gen());
+            REQUIRE(canvas->target(buffer, width, width, 64, ColorSpace::ABGR8888) == Result::Success);
+            auto shape = Shape::gen();
+            REQUIRE(shape->moveTo(-20.3f, 5.7f) == Result::Success);
+            REQUIRE(shape->lineTo(40.1f, 50.9f) == Result::Success);
+            REQUIRE(shape->lineTo(-7.45f, 61.3f) == Result::Success);
+            REQUIRE(shape->strokeWidth(3.3f) == Result::Success);
+            REQUIRE(shape->strokeFill(0, 0, 0, 255) == Result::Success);
+            REQUIRE(shape->translate(shift, 0.0f) == Result::Success);
+            REQUIRE(canvas->add(shape) == Result::Success);
+            REQUIRE(canvas->draw() == Result::Success);
+            REQUIRE(canvas->sync() == Result::Success);
+        };
+
+        uint32_t tile[64 * 64] = {};
+        uint32_t wide[128 * 64] = {};
+        render(tile, 64, 0.0f);
+        render(wide, 128, 64.0f);
+
+        auto differing = 0;
+        for (auto row = 0; row < 64; ++row) {
+            for (auto column = 0; column < 64; ++column) {
+                if (tile[row * 64 + column] != wide[row * 128 + 64 + column]) ++differing;
+            }
+        }
+        REQUIRE(differing == 0);
+    }
+    REQUIRE(Initializer::term() == Result::Success);
+}
+
 #endif
