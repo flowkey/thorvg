@@ -52,9 +52,9 @@ void WgShaderTypeMat4x4f::identity()
 }
 
 
-WgShaderTypeMat4x4f::WgShaderTypeMat4x4f(size_t w, size_t h)
+WgShaderTypeMat4x4f::WgShaderTypeMat4x4f(size_t w, size_t h, const Point& offset)
 {
-    update(w, h);
+    update(w, h, offset);
 }
 
 
@@ -80,12 +80,13 @@ void WgShaderTypeMat4x4f::update(const Matrix& transform)
 }
 
 
-void WgShaderTypeMat4x4f::update(size_t w, size_t h)
+// The target pixel at (offset.x, offset.y) of the mesh coordinates lands on the target's origin.
+void WgShaderTypeMat4x4f::update(size_t w, size_t h, const Point& offset)
 {
     mat[0]  = +2.0f / w; mat[1]  = +0.0f;     mat[2]  = +0.0f; mat[3]  = +0.0f;
     mat[4]  = +0.0f;     mat[5]  = -2.0f / h; mat[6]  = +0.0f; mat[7]  = +0.0f;
     mat[8]  = +0.0f;     mat[9]  = +0.0f;     mat[10] = -1.0f; mat[11] = +0.0f;
-    mat[12] = -1.0f;     mat[13] = +1.0f;     mat[14] = +0.0f; mat[15] = +1.0f;
+    mat[12] = -1.0f - 2.0f * offset.x / w; mat[13] = +1.0f + 2.0f * offset.y / h;     mat[14] = +0.0f; mat[15] = +1.0f;
 }
 
 //************************************************************************

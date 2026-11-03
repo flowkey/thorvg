@@ -54,6 +54,8 @@ private:
     WGPUBindGroup bindGroupViewMat{};
     uint32_t viewMatWidth{};
     uint32_t viewMatHeight{};
+    Point viewMatOffset{};  // where the view is in mesh coordinates (see WgCanvas::viewOffset)
+    Point viewMatAppliedOffset{};
     // opacity value pool
     WGPUBuffer bufferOpacities[256]{};
     WGPUBindGroup bindGroupOpacities[256]{};
@@ -105,6 +107,8 @@ private:
     void clearClipPath(WgContext& context, WgPaint* paint);
     void updateViewMat(WgContext& context, uint32_t width, uint32_t height);
 public:
+    // moves the view in mesh coordinates: the vertex stage subtracts the offset (WgCanvas::viewOffset)
+    void viewOffset(WgContext& context, const Point& offset);
     void initialize(WgContext& context, uint32_t width, uint32_t height);
     // recreates the pipelines that write the target, after WgContext::format changed
     void updateTargetFormat(WgContext& context) { pipelines.updateTargetFormat(context); }

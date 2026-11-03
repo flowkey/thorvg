@@ -48,9 +48,9 @@ static WGPURenderPipeline _gradientBlendPipeline(WgPipelines& pipelines, WgConte
 
 void WgCompositor::updateViewMat(WgContext& context, uint32_t width, uint32_t height)
 {
-    if (bindGroupViewMat && viewMatWidth == width && viewMatHeight == height) return;
+    if (bindGroupViewMat && viewMatWidth == width && viewMatHeight == height && viewMatAppliedOffset == viewMatOffset) return;
 
-    WgShaderTypeMat4x4f viewMat(width, height);
+    WgShaderTypeMat4x4f viewMat(width, height, viewMatOffset);
     bool bufferChanged = context.allocateBufferUniform(bufferViewMat, &viewMat, sizeof(viewMat));
 
     if (bufferChanged || !bindGroupViewMat) {
@@ -60,6 +60,14 @@ void WgCompositor::updateViewMat(WgContext& context, uint32_t width, uint32_t he
 
     viewMatWidth = width;
     viewMatHeight = height;
+    viewMatAppliedOffset = viewMatOffset;
+}
+
+
+void WgCompositor::viewOffset(WgContext& context, const Point& offset)
+{
+    viewMatOffset = offset;
+    if (viewMatWidth > 0 && viewMatHeight > 0) updateViewMat(context, viewMatWidth, viewMatHeight);
 }
 
 
@@ -271,7 +279,7 @@ void WgCompositor::requestShape(WgShape* shape)
     else shapeSettings.bindGroupIdx = stageBufferPaint.append(shapeSettings.settings);
 
     if (!shape->stroke.mesh.vbuffer.empty()) {
-        Matrix viewMatrix{2.0f / width, 0.0f, -1.0f, 0.0f, -2.0f / height, 1.0f, 0.0f, 0.0f, 1.0f};
+        Matrix viewMatrix{2.0f / width, 0.0f, -1.0f - 2.0f * viewMatOffset.x / width, 0.0f, -2.0f / height, 1.0f + 2.0f * viewMatOffset.y / height, 0.0f, 0.0f, 1.0f};
         WgShaderTypeMat4x4fBlock strokeViewMat{{viewMatrix * shape->transform}, {}};
         // Test the clip depth during the stroke color draw.
         strokeViewMat.matrix.mat[14] = 128.0f / 255.0f;

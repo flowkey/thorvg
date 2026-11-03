@@ -24,7 +24,7 @@
 #include "tvgMath.h"
 #include "tvgWgStencilBatch.h"
 
-static bool eligible(const WgShape* rdata, BlendMethod blendMethod, RenderRegion& bounds)
+static bool eligible(const WgShape* rdata, BlendMethod blendMethod, const Point& viewOffset, RenderRegion& bounds)
 {
     if (blendMethod != BlendMethod::Normal || !rdata->shape.setting.valid) return false;
 
@@ -36,10 +36,10 @@ static bool eligible(const WgShape* rdata, BlendMethod blendMethod, RenderRegion
     const auto& bbox = rdata->bbox;
     if (!std::isfinite(bbox.min.x) || !std::isfinite(bbox.min.y) || !std::isfinite(bbox.max.x) || !std::isfinite(bbox.max.y)) return false;
 
-    const auto minX = tvg::clamp(static_cast<double>(bbox.min.x), static_cast<double>(rdata->viewport.xMin), static_cast<double>(rdata->viewport.xMax));
-    const auto minY = tvg::clamp(static_cast<double>(bbox.min.y), static_cast<double>(rdata->viewport.yMin), static_cast<double>(rdata->viewport.yMax));
-    const auto maxX = tvg::clamp(static_cast<double>(bbox.max.x), static_cast<double>(rdata->viewport.xMin), static_cast<double>(rdata->viewport.xMax));
-    const auto maxY = tvg::clamp(static_cast<double>(bbox.max.y), static_cast<double>(rdata->viewport.yMin), static_cast<double>(rdata->viewport.yMax));
+    const auto minX = tvg::clamp(static_cast<double>(bbox.min.x - viewOffset.x), static_cast<double>(rdata->viewport.xMin), static_cast<double>(rdata->viewport.xMax));
+    const auto minY = tvg::clamp(static_cast<double>(bbox.min.y - viewOffset.y), static_cast<double>(rdata->viewport.yMin), static_cast<double>(rdata->viewport.yMax));
+    const auto maxX = tvg::clamp(static_cast<double>(bbox.max.x - viewOffset.x), static_cast<double>(rdata->viewport.xMin), static_cast<double>(rdata->viewport.xMax));
+    const auto maxY = tvg::clamp(static_cast<double>(bbox.max.y - viewOffset.y), static_cast<double>(rdata->viewport.yMin), static_cast<double>(rdata->viewport.yMax));
     if (maxX <= minX || maxY <= minY) return false;
 
     bounds = {static_cast<int32_t>(std::floor(minX)), static_cast<int32_t>(std::floor(minY)), static_cast<int32_t>(std::ceil(maxX)), static_cast<int32_t>(std::ceil(maxY))};
@@ -118,10 +118,10 @@ static void append(WgStencilBatch& batch, WgShape* rdata, const RenderRegion& bo
     addBounds(batch, bounds);
 }
 
-bool WgStencilBatch::draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList)
+bool WgStencilBatch::draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList, const Point& viewOffset)
 {
     RenderRegion bounds;
-    if (!eligible(rdata, blendMethod, bounds)) return false;
+    if (!eligible(rdata, blendMethod, viewOffset, bounds)) return false;
 
     if (!appendable(*this, sceneTask, rdata, bounds, renderTaskList)) {
         emitSingle(*this, sceneTask, rdata, bounds, renderTaskList);

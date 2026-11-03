@@ -27,7 +27,7 @@
 
 struct WgStencilBatch
 {
-    bool draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList);
+    bool draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList, const Point& viewOffset);
 
     WgSceneTask* sceneTask{};
     WgRenderTask* task{};

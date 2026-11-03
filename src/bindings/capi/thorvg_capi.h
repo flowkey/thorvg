@@ -715,6 +715,20 @@ TVG_API Tvg_Result tvg_wgcanvas_set_target(Tvg_Canvas canvas, void* device, void
  */
 TVG_API Tvg_Result tvg_wgcanvas_set_target_with_context(Tvg_Canvas canvas, const Tvg_WgContext* context, void* target, uint32_t w, uint32_t h, Tvg_Colorspace cs, int type);
 
+/**
+ * @brief Sets where the view stands in the coordinates of the paints (the vertex stage subtracts it; no paint is updated).
+ *
+ * @param[in] canvas The WebGPU canvas.
+ * @param[in] x The x of the paint coordinates drawn at the left edge of the target.
+ * @param[in] y The y of the paint coordinates drawn at the top edge of the target.
+ *
+ * @retval TVG_RESULT_NOT_SUPPORTED In case the wg engine is not supported.
+ *
+ * @note Plain painting only: scenes that compose (masks, clips, effects) need the offset at 0.
+ * @note Experimental API
+ */
+TVG_API Tvg_Result tvg_wgcanvas_set_view_offset(Tvg_Canvas canvas, float x, float y);
+
 /** \} */   // end defgroup ThorVGCapi_WgCanvas
 
 /************************************************************************/

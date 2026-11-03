@@ -325,6 +325,7 @@ bool WgRenderer::preRender()
     mSolidBatch = {};
     mStencilBatch = {};
     mCompositor.reset(mContext);
+    mCompositor.viewOffset(mContext, mViewOffset);
 
     assert(mRenderTargetStack.count == 0);
     mRenderTargetStack.push(&mRenderTargetRoot);
@@ -351,16 +352,17 @@ bool WgRenderer::renderShape(RenderData data)
 
     // A shape wholly outside the viewport draws nothing: leave it out of the frame's task list, so it is neither
     // staged nor encoded. Its meshes stay prepared for when the viewport comes back to it. One pixel of margin
-    // covers anti-aliasing. A shape without a mesh has an inverted box and is left out as well.
+    // covers anti-aliasing. A shape without a mesh has an inverted box and is left out as well. The meshes are in the
+    // paints' coordinates: the viewport is there where the view offset puts it.
     const auto region = viewport();
     const auto& box = rdata->bbox;
-    if (box.max.x + 1.0f < (float)region.xMin || box.min.x - 1.0f > (float)region.xMax ||
-        box.max.y + 1.0f < (float)region.yMin || box.min.y - 1.0f > (float)region.yMax) return true;
+    if (box.max.x + 1.0f < (float)region.xMin + mViewOffset.x || box.min.x - 1.0f > (float)region.xMax + mViewOffset.x ||
+        box.max.y + 1.0f < (float)region.yMin + mViewOffset.y || box.min.y - 1.0f > (float)region.yMax + mViewOffset.y) return true;
 
     WgSceneTask* sceneTask = mSceneTaskStack.last();
 
     if (mSolidBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList)) return true;
-    if (mStencilBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList)) return true;
+    if (mStencilBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList, mViewOffset)) return true;
 
     WgPaintTask* paintTask = new WgPaintTask(rdata, mBlendMethod);
     sceneTask->children.push(paintTask);

@@ -36,10 +36,10 @@ struct WgShaderTypeMat4x4f
 
     WgShaderTypeMat4x4f();
     WgShaderTypeMat4x4f(const Matrix& transform);
-    WgShaderTypeMat4x4f(size_t w, size_t h);
+    WgShaderTypeMat4x4f(size_t w, size_t h, const Point& offset = {});
     void identity();
     void update(const Matrix& transform);
-    void update(size_t w, size_t h);
+    void update(size_t w, size_t h, const Point& offset = {});
 };
 
 struct WgShaderTypeMat4x4fBlock

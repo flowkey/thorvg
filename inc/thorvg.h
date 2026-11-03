@@ -2588,6 +2588,24 @@ struct TVG_API WgCanvas final : Canvas
     };
 
     /**
+     * @brief Sets where the view stands in the coordinates of the paints.
+     *
+     * The paint pixel (x, y) is drawn at the target pixel (0, 0): the vertex stage subtracts the offset, so moving the view
+     * (a scroll) changes one uniform and no paint is updated, transformed or tessellated again. Paints wholly outside the
+     * viewport moved by the offset are left out of the frame. It takes effect with the next draw.
+     *
+     * @param[in] x The x of the paint coordinates drawn at the left edge of the target.
+     * @param[in] y The y of the paint coordinates drawn at the top edge of the target.
+     *
+     * @retval Result::NonSupport In case the wg engine is not supported.
+     *
+     * @note It applies to plain painting. Scenes that compose (masks, clips, effects, opacity groups) draw into regions
+     *       that are given in the paints' coordinates and are not moved by it: leave the offset at 0 for those.
+     * @note Experimental API
+     */
+    Result viewOffset(float x, float y) noexcept;
+
+    /**
      * @brief Sets the drawing target for the rasterization.
      *
      * @param[in] device WGPUDevice, a desired handle for the wgpu device.

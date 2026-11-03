@@ -113,6 +113,12 @@ TVG_API Tvg_Result tvg_wgcanvas_set_target(Tvg_Canvas canvas, void* device, void
     return TVG_RESULT_INVALID_ARGUMENT;
 }
 
+TVG_API Tvg_Result tvg_wgcanvas_set_view_offset(Tvg_Canvas canvas, float x, float y)
+{
+    if (canvas) return (Tvg_Result) reinterpret_cast<WgCanvas*>(canvas)->viewOffset(x, y);
+    return TVG_RESULT_INVALID_ARGUMENT;
+}
+
 TVG_API Tvg_Result tvg_wgcanvas_set_target_with_context(Tvg_Canvas canvas, const Tvg_WgContext* context, void* target, uint32_t w, uint32_t h, Tvg_Colorspace cs, int type)
 {
     if (canvas && context) {

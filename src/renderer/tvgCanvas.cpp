@@ -258,6 +258,15 @@ Result WgCanvas::target(const Context& context, void* target, uint32_t w, uint32
     return Result::NonSupport;
 }
 
+Result WgCanvas::viewOffset(float x, float y) noexcept
+{
+#ifdef THORVG_WG_ENGINE_SUPPORT
+    static_cast<WgRenderer*>(pImpl->renderer)->viewOffset({x, y});
+    return Result::Success;
+#endif
+    return Result::NonSupport;
+}
+
 WgCanvas* WgCanvas::gen(EngineOption op) noexcept
 {
 #ifdef THORVG_WG_ENGINE_SUPPORT
