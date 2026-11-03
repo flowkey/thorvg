@@ -255,6 +255,7 @@ struct SceneImpl : Scene
             PAINT(cdup)->parent = scene;
             cdup->ref();
             dup->paints.push_back(cdup);
+            PAINT(cdup)->position = std::prev(dup->paints.end());
         }
 
         if (effects) {
@@ -328,8 +329,9 @@ struct SceneImpl : Scene
         if (PAINT(paint)->parent != this) return Result::InsufficientCondition;
         //when the paint is destroyed damage will be triggered
         if (PAINT(paint)->refCnt > 1) PAINT(paint)->damage();
+        auto position = PAINT(paint)->position;
         PAINT(paint)->unref();
-        paints.remove(paint);
+        paints.erase(position);
         return Result::Success;
     }
 
@@ -350,11 +352,10 @@ struct SceneImpl : Scene
 
         if (!at) {
             paints.push_back(target);
+            timpl->position = std::prev(paints.end());
         } else {
-            //OPTIMIZE: Remove searching?
-            auto itr = find_if(paints.begin(), paints.end(),[&at](const Paint* paint){ return at == paint; });
-            if (itr == paints.end()) return Result::InvalidArguments;
-            paints.insert(itr, target);
+            if (PAINT(at)->parent != this) return Result::InvalidArguments;
+            timpl->position = paints.insert(PAINT(at)->position, target);
         }
         timpl->attachTo(this);
         return Result::Success;

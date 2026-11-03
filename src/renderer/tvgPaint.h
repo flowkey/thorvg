@@ -45,6 +45,7 @@ struct Paint::Impl
 {
     Paint* paint = nullptr;
     Paint* parent = nullptr;
+    list<Paint*>::iterator position;   //where the paint stands in its parent scene's children list (valid while the parent is a scene that holds it)
     Mask* maskData = nullptr;
     Shape* clipper = nullptr;
     RenderMethod* renderer = nullptr;
