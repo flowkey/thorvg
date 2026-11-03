@@ -258,7 +258,7 @@ RenderData WgRenderer::prepare(const RenderShape& rshape, RenderData data, const
     if (!data) flags = RenderUpdateFlag::All;
 
     // update geometry
-    if (flags & (RenderUpdateFlag::Transform | RenderUpdateFlag::Path | RenderUpdateFlag::Stroke)) shape->update(rshape, transform, flags);
+    if (flags & (RenderUpdateFlag::Transform | RenderUpdateFlag::Path | RenderUpdateFlag::Stroke)) shape->update(rshape, transform, flags, vport, clips.empty() && !clipper);
 
     // update transform
     if (flags & RenderUpdateFlag::Transform) shape->transform = transform;
@@ -349,13 +349,10 @@ bool WgRenderer::renderShape(RenderData data)
 {
     auto rdata = (WgShape*)data;
 
-    // A shape wholly outside the viewport draws nothing: leave it out of the frame's task list, so it is neither
-    // staged nor encoded. Its meshes stay prepared for when the viewport comes back to it. One pixel of margin
-    // covers anti-aliasing. A shape without a mesh has an inverted box and is left out as well.
-    const auto region = viewport();
-    const auto& box = rdata->bbox;
-    if (box.max.x + 1.0f < (float)region.xMin || box.min.x - 1.0f > (float)region.xMax ||
-        box.max.y + 1.0f < (float)region.yMin || box.min.y - 1.0f > (float)region.yMax) return true;
+    // A shape wholly outside the viewport draws nothing: leave it out of the frame's task list, so it is neither staged nor encoded.
+    // Its meshes stay prepared for when the viewport comes back to it. A shape whose translation was deferred (see WgShape::translate)
+    // is brought to its transform here, once it is in view.
+    if (!rdata->settle(viewport())) return true;
 
     WgSceneTask* sceneTask = mSceneTaskStack.last();
 

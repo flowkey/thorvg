@@ -146,31 +146,62 @@ static void _translate(BBox& box, const Point& offset)
     box.max.y += offset.y;
 }
 
-// When only the translation of the transform changed, the fill mesh is moved instead of being
-// rebuilt: tessellation, stroking and the thin-path decisions depend on the linear part only.
-// Fill meshes and the shape bounds are in target coordinates; stroke meshes are in local
-// coordinates (the compositor applies the transform), so they stay as they are.
-bool WgShape::translate(const Matrix& newTransform, RenderUpdateFlag flag)
+static bool _outside(const BBox& box, const Point& offset, const RenderRegion& region)
 {
-    if (flag & ~(RenderUpdateFlag::Transform | RenderUpdateFlag::Color | RenderUpdateFlag::Clip)) return false;
-    if (shape.mesh.vbuffer.empty() && stroke.mesh.vbuffer.empty()) return false;
-    if (!tvg::equal(transform.e11, newTransform.e11) || !tvg::equal(transform.e12, newTransform.e12) ||
-        !tvg::equal(transform.e21, newTransform.e21) || !tvg::equal(transform.e22, newTransform.e22) ||
-        !tvg::equal(transform.e31, newTransform.e31) || !tvg::equal(transform.e32, newTransform.e32) ||
-        !tvg::equal(transform.e33, newTransform.e33)) return false;
+    // one pixel of margin covers anti-aliasing
+    return box.max.x + offset.x + 1.0f < (float)region.xMin || box.min.x + offset.x - 1.0f > (float)region.xMax ||
+           box.max.y + offset.y + 1.0f < (float)region.yMin || box.min.y + offset.y - 1.0f > (float)region.yMax;
+}
 
-    const Point offset = {newTransform.e13 - transform.e13, newTransform.e23 - transform.e23};
+void WgShape::translate(const Point& offset)
+{
     clips.clear();
     _translate(shape.mesh.vbuffer, offset);
     _translate(bboxMesh.vbuffer, offset);
     if (!shape.mesh.vbuffer.empty()) _translate(shape.bbox, offset);
     _translate(bbox, offset);
+}
+
+// When only the translation of the transform changed, the fill mesh is moved instead of being
+// rebuilt: tessellation, stroking and the thin-path decisions depend on the linear part only.
+// Fill meshes and the shape bounds are in target coordinates; stroke meshes are in local
+// coordinates (the compositor applies the transform), so they stay as they are.
+// A shape that ends up wholly outside the viewport (and has no clips, and is no clipper) is not moved at all:
+// `meshTransform` keeps the transform its meshes are in, and settle() moves them when the shape comes into view.
+// A scroll, which translates the whole scene, then costs the shapes in view and a comparison for the others.
+bool WgShape::translate(const Matrix& newTransform, RenderUpdateFlag flag, const RenderRegion& region, bool mayDefer)
+{
+    if (flag & ~(RenderUpdateFlag::Transform | RenderUpdateFlag::Color | RenderUpdateFlag::Clip)) return false;
+    if (shape.mesh.vbuffer.empty() && stroke.mesh.vbuffer.empty()) return false;
+    if (!tvg::equal(meshTransform.e11, newTransform.e11) || !tvg::equal(meshTransform.e12, newTransform.e12) ||
+        !tvg::equal(meshTransform.e21, newTransform.e21) || !tvg::equal(meshTransform.e22, newTransform.e22) ||
+        !tvg::equal(meshTransform.e31, newTransform.e31) || !tvg::equal(meshTransform.e32, newTransform.e32) ||
+        !tvg::equal(meshTransform.e33, newTransform.e33)) return false;
+
+    const Point offset = {newTransform.e13 - meshTransform.e13, newTransform.e23 - meshTransform.e23};
+    if (mayDefer && _outside(bbox, offset, region)) return true;
+    translate(offset);
+    meshTransform = newTransform;
     return true;
 }
 
-void WgShape::update(const RenderShape& rshape, const Matrix& transform, RenderUpdateFlag flag)
+// Brings the meshes of a shape whose translation was deferred to its transform, if the shape is in view. False when the shape is wholly outside the viewport:
+// it draws nothing, so it is left out of the frame.
+bool WgShape::settle(const RenderRegion& region)
 {
-    if (translate(transform, flag)) return;
+    const Point offset = {transform.e13 - meshTransform.e13, transform.e23 - meshTransform.e23};
+    const bool pending = !tvg::zero(offset.x) || !tvg::zero(offset.y);
+    if (_outside(bbox, pending ? offset : Point{0, 0}, region)) return false;
+    if (pending) {
+        translate(offset);
+        meshTransform = transform;
+    }
+    return true;
+}
+
+void WgShape::update(const RenderShape& rshape, const Matrix& transform, RenderUpdateFlag flag, const RenderRegion& region, bool mayDefer)
+{
+    if (translate(transform, flag, region, mayDefer)) return;
 
     reset();  // Optimize: bad idea to reset meshes always. it could re-use the meshes if there haven't been any path changes.
 
@@ -261,6 +292,7 @@ void WgShape::update(const RenderShape& rshape, const Matrix& transform, RenderU
     // update shapes bbox (with empty path handling)
     if (shape.mesh.vbuffer.empty() && stroke.mesh.vbuffer.empty()) bbox = {{0, 0}, {0, 0}};
     bboxMesh.bbox(bbox.min, bbox.max);
+    meshTransform = transform;
 }
 
 void WgShape::reset()

@@ -110,11 +110,15 @@ struct WgShape : WgPaint
     bool convex;
     bool strokeFirst;
     bool strokeOverlapFree;
+    // The transform the fill meshes and the bounds are in. It trails `transform` while a translation is deferred (see translate()).
+    Matrix meshTransform{};
 
     void expand(const BBox& bb);
     void update(const RenderShape& rshape, const RenderRegion& vport, uint8_t shapeOpacity, uint8_t strokeOpacity, uint8_t opacity);
-    void update(const RenderShape& rshape, const Matrix& transform, RenderUpdateFlag flag);
-    bool translate(const Matrix& transform, RenderUpdateFlag flag);
+    void update(const RenderShape& rshape, const Matrix& transform, RenderUpdateFlag flag, const RenderRegion& region, bool mayDefer);
+    bool translate(const Matrix& transform, RenderUpdateFlag flag, const RenderRegion& region, bool mayDefer);
+    bool settle(const RenderRegion& region);
+    void translate(const Point& offset);
     void reset();
     void release(WgContext& context) override;
 
