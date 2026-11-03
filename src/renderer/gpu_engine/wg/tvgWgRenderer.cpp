@@ -348,6 +348,15 @@ bool WgRenderer::preRender()
 bool WgRenderer::renderShape(RenderData data)
 {
     auto rdata = (WgShape*)data;
+
+    // A shape wholly outside the viewport draws nothing: leave it out of the frame's task list, so it is neither
+    // staged nor encoded. Its meshes stay prepared for when the viewport comes back to it. One pixel of margin
+    // covers anti-aliasing. A shape without a mesh has an inverted box and is left out as well.
+    const auto region = viewport();
+    const auto& box = rdata->bbox;
+    if (box.max.x + 1.0f < (float)region.xMin || box.min.x - 1.0f > (float)region.xMax ||
+        box.max.y + 1.0f < (float)region.yMin || box.min.y - 1.0f > (float)region.yMax) return true;
+
     WgSceneTask* sceneTask = mSceneTaskStack.last();
 
     if (mSolidBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList)) return true;
