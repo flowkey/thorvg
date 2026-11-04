@@ -24,6 +24,16 @@
 #include <algorithm>
 #include "tvgWgCompositor.h"
 
+// every encoded command counts in the frame statistics
+#define wgpuCommandEncoderBeginRenderPass(...) (++frame->renderPasses, ::wgpuCommandEncoderBeginRenderPass(__VA_ARGS__))
+#define wgpuRenderPassEncoderDrawIndexed(...) (++frame->drawCalls, ::wgpuRenderPassEncoderDrawIndexed(__VA_ARGS__))
+#define wgpuRenderPassEncoderSetPipeline(...) (++frame->pipelineSets, ::wgpuRenderPassEncoderSetPipeline(__VA_ARGS__))
+#define wgpuRenderPassEncoderSetBindGroup(...) (++frame->bindGroupSets, ::wgpuRenderPassEncoderSetBindGroup(__VA_ARGS__))
+#define wgpuRenderPassEncoderSetVertexBuffer(...) (++frame->otherCommands, ::wgpuRenderPassEncoderSetVertexBuffer(__VA_ARGS__))
+#define wgpuRenderPassEncoderSetIndexBuffer(...) (++frame->otherCommands, ::wgpuRenderPassEncoderSetIndexBuffer(__VA_ARGS__))
+#define wgpuRenderPassEncoderSetScissorRect(...) (++frame->otherCommands, ::wgpuRenderPassEncoderSetScissorRect(__VA_ARGS__))
+#define wgpuRenderPassEncoderSetStencilReference(...) (++frame->otherCommands, ::wgpuRenderPassEncoderSetStencilReference(__VA_ARGS__))
+
 static WGPURenderPipeline _gradientPipeline(const WgPipelines& pipelines, WgRenderSettingsType type, bool convex)
 {
     switch (type) {
@@ -73,6 +83,7 @@ void WgCompositor::viewOffset(WgContext& context, const Point& offset)
 
 void WgCompositor::initialize(WgContext& context, uint32_t width, uint32_t height)
 {
+    frame = &context.frame;
     // pipelines (external handle, do not release)
     pipelines.initialize(context);
     stageBufferGeometry.initialize(context);

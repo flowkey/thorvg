@@ -669,6 +669,8 @@ protected:
     RenderRegion vport;         //viewport
 
 public:
+    uint32_t updateVisits = 0;  //paints the update traversal visited, for the engine's frame statistics
+
     //common implementation
     uint32_t ref();
     uint32_t unref();

@@ -42,6 +42,8 @@ void WgBatchTask::stage(WgCompositor& compositor)
 
 void WgBatchTask::run(WgContext&, WgCompositor& compositor, WGPUCommandEncoder)
 {
+    ++compositor.frame->batches;
+    compositor.frame->batchedPaints += shapes.count;
     if (stencilBatch) compositor.renderStencilBatch(shapes, stencilRange);
     else compositor.renderSolidBatch(solidRange);
 }
@@ -78,6 +80,7 @@ void WgPaintTask::stage(WgCompositor& compositor)
 
 void WgPaintTask::run(WgContext& context, WgCompositor& compositor, WGPUCommandEncoder encoder)
 {
+    ++compositor.frame->singlePaints;
     if (renderPaint->type() == tvg::Type::Shape) compositor.renderShape(context, (WgShape*)renderPaint, blendMethod);
     if (renderPaint->type() == tvg::Type::Picture) compositor.renderImage(context, (WgImage*)renderPaint, blendMethod);
 }

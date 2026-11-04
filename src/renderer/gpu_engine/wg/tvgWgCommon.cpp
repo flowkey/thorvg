@@ -24,6 +24,9 @@
 #include "tvgWgCommon.h"
 #include "tvgArray.h"
 
+// every buffer upload counts in the frame statistics
+#define wgpuQueueWriteBuffer(queue, buffer, offset, data, size) (++frame.bufferWrites, frame.bufferWriteBytes += (size), ::wgpuQueueWriteBuffer(queue, buffer, offset, data, size))
+
 void WgContext::initialize(const WgCanvas::Context& ctx)
 {
     this->instance = (WGPUInstance)ctx.instance;
@@ -260,6 +263,7 @@ void WgContext::submitCommandEncoder(WGPUCommandEncoder commandEncoder)
 {
     const WGPUCommandBufferDescriptor commandBufferDesc{};
     WGPUCommandBuffer commandsBuffer = wgpuCommandEncoderFinish(commandEncoder, &commandBufferDesc);
+    ++frame.submits;
     wgpuQueueSubmit(queue, 1, &commandsBuffer);
     wgpuCommandBufferRelease(commandsBuffer);
 }
@@ -276,6 +280,7 @@ void WgContext::releaseCommandEncoder(WGPUCommandEncoder& commandEncoder)
 
 void WgContext::submit()
 {
+    ++frame.submits;
     wgpuQueueSubmit(queue, 0, nullptr);
 }
 

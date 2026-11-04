@@ -276,6 +276,16 @@ Result WgCanvas::statistics(Statistics& statistics) const noexcept
     return Result::NonSupport;
 }
 
+Result WgCanvas::frameStatistics(FrameStatistics& statistics) noexcept
+{
+#ifdef THORVG_WG_ENGINE_SUPPORT
+    auto renderer = static_cast<WgRenderer*>(pImpl->renderer);
+    renderer->frameStatistics(statistics);
+    return Result::Success;
+#endif
+    return Result::NonSupport;
+}
+
 Result WgCanvas::sampleCount(uint32_t samples) noexcept
 {
 #ifdef THORVG_WG_ENGINE_SUPPORT

@@ -118,12 +118,18 @@ static void append(WgStencilBatch& batch, WgShape* rdata, const RenderRegion& bo
     addBounds(batch, bounds);
 }
 
-bool WgStencilBatch::draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList, const Point& viewOffset)
+bool WgStencilBatch::draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList, const Point& viewOffset, WgCanvas::FrameStatistics& frame)
 {
     RenderRegion bounds;
     if (!eligible(rdata, blendMethod, viewOffset, bounds)) return false;
 
     if (!appendable(*this, sceneTask, rdata, bounds, renderTaskList)) {
+        // why the shape starts a new run, when one of the same scene and viewport was open
+        if (this->task && this->sceneTask == sceneTask && this->viewport == rdata->viewport) {
+            if (sceneTask->children.last() != this->task || renderTaskList.last() != this->task) ++frame.batchBreaksInterleaved;
+            else if (fillRule != rdata->fillRule) ++frame.batchBreaksFillRule;
+            else ++frame.batchBreaksOverlap;
+        }
         emitSingle(*this, sceneTask, rdata, bounds, renderTaskList);
         return true;
     }

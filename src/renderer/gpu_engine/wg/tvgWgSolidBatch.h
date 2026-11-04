@@ -27,7 +27,7 @@
 
 struct WgSolidBatch
 {
-    bool draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList);
+    bool draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList, WgCanvas::FrameStatistics& frame);
     bool draw(WgSceneTask* sceneTask, WgImage* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList);
 
     WgSceneTask* sceneTask{};

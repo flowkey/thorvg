@@ -23,6 +23,7 @@
 #ifndef _TVG_WG_RENDERER_H_
 #define _TVG_WG_RENDERER_H_
 
+#include <chrono>
 #include "tvgRender.h"
 #include "tvgWgSolidBatch.h"
 #include "tvgWgStencilBatch.h"
@@ -67,6 +68,7 @@ struct WgRenderer : RenderMethod
     void viewOffset(const Point& offset) { mViewOffset = offset; }
     void statistics(WgCanvas::Statistics& statistics) const;
     Result sampleCount(uint32_t samples);
+    void frameStatistics(WgCanvas::FrameStatistics& statistics);
 
     //composition
     RenderCompositor* target(const RenderRegion& region, ColorSpace cs, CompositionFlag flags) override;
@@ -138,6 +140,7 @@ private:
     Array<ConfiguredSurface> mConfiguredSurfaces;
 
     bool mClearBuffer{};
+    std::chrono::steady_clock::time_point mRenderStarted{};  // when preRender began the frame's draw traversal
     uint32_t mSurfaceConfigures{};
 };
 

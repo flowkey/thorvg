@@ -755,6 +755,30 @@ TVG_API Tvg_Result tvg_wgcanvas_set_view_offset(Tvg_Canvas canvas, float x, floa
 TVG_API Tvg_Result tvg_wgcanvas_get_statistics(Tvg_Canvas canvas, Tvg_WgStatistics* statistics);
 
 /**
+ * @brief What the frames since the last call cost (see WgCanvas::FrameStatistics for each field).
+ *
+ * @note Experimental API
+ */
+typedef struct
+{
+        uint32_t paintsUpdated, paintsPrepared, paintsRendered, paintsCulled;
+        uint32_t batches, batchedPaints, singlePaints, batchBreaksInterleaved, batchBreaksFillRule, batchBreaksOverlap;
+        uint32_t renderPasses, drawCalls, pipelineSets, bindGroupSets, otherCommands;
+        uint32_t bufferWrites;
+        uint64_t bufferWriteBytes;
+        uint32_t submits;
+        uint32_t renderMicroseconds, stageMicroseconds, encodeMicroseconds, submitMicroseconds, syncMicroseconds;
+} Tvg_WgFrameStatistics;
+
+/**
+ * @brief Reads the counters of the frames since the last call and starts new ones.
+ *
+ * @retval TVG_RESULT_NOT_SUPPORTED In case the wg engine is not supported.
+ * @note Experimental API
+ */
+TVG_API Tvg_Result tvg_wgcanvas_get_frame_statistics(Tvg_Canvas canvas, Tvg_WgFrameStatistics* statistics);
+
+/**
  * @brief Sets the samples per pixel of the anti-aliased drawing: 4 (the default) or 1 (aliased, no multisampled buffers).
  *
  * @param[in] canvas The WebGPU canvas.

@@ -110,6 +110,8 @@ private:
     void prepareIntermediates(WgContext& context);
     void releaseIntermediates(WgContext& context);
 public:
+    // the context's frame counters, which the encoding counts its commands in
+    WgCanvas::FrameStatistics* frame{};
     // whether the intermediate targets were allocated (something blended or had an effect since the last resize)
     bool intermediatesAllocated() const { return targetTemp0.texture != nullptr; }
     // moves the view in mesh coordinates: the vertex stage subtracts the offset (WgCanvas::viewOffset)

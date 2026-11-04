@@ -68,11 +68,12 @@ static inline WgRenderTask* promote(WgSceneTask* sceneTask, WgRenderTask* task, 
     return batchTask;
 }
 
-bool WgSolidBatch::draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList)
+bool WgSolidBatch::draw(WgSceneTask* sceneTask, WgShape* rdata, BlendMethod blendMethod, Array<WgRenderTask*>& renderTaskList, WgCanvas::FrameStatistics& frame)
 {
     if (!eligible(rdata, blendMethod)) return false;
 
     if (type != Type::Shape || !appendable(this->sceneTask, task, viewport, sceneTask, rdata, renderTaskList)) {
+        if (type == Type::Shape && this->sceneTask == sceneTask && viewport == rdata->viewport) ++frame.batchBreaksInterleaved;
         task = emitSingle(sceneTask, rdata, renderTaskList);
         this->sceneTask = sceneTask;
         first = rdata;

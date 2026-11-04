@@ -23,6 +23,17 @@
 #include <cassert>
 #include "tvgTaskScheduler.h"
 #include "tvgWgRenderer.h"
+#include <chrono>
+
+static std::chrono::steady_clock::time_point _now()
+{
+    return std::chrono::steady_clock::now();
+}
+
+static uint32_t _microseconds(std::chrono::steady_clock::time_point from, std::chrono::steady_clock::time_point to)
+{
+    return (uint32_t)std::chrono::duration_cast<std::chrono::microseconds>(to - from).count();
+}
 
 /************************************************************************/
 /* WgPaintPool                                                          */
@@ -241,6 +252,14 @@ void WgRenderer::statistics(WgCanvas::Statistics& statistics) const
     statistics.intermediateTargets = (mCompositor.intermediatesAllocated() ? 2 : 0) + mRenderTargetPool.list.count;
 }
 
+void WgRenderer::frameStatistics(WgCanvas::FrameStatistics& statistics)
+{
+    mContext.frame.paintsUpdated = updateVisits;
+    statistics = mContext.frame;
+    mContext.frame = {};
+    updateVisits = 0;
+}
+
 Result WgRenderer::sampleCount(uint32_t samples)
 {
     if (samples != 1 && samples != 4) return Result::InvalidArguments;
@@ -304,6 +323,7 @@ RenderData WgRenderer::prepare(const RenderShape& rshape, RenderData data, const
 {
     auto shape = data ? (WgShape*)data : mPaintPool.shape();
     if (!data) flags = RenderUpdateFlag::All;
+    ++mContext.frame.paintsPrepared;
 
     // update geometry
     if (flags & (RenderUpdateFlag::Transform | RenderUpdateFlag::Path | RenderUpdateFlag::Stroke)) shape->update(rshape, transform, flags);
@@ -342,6 +362,7 @@ RenderData WgRenderer::prepare(RenderSurface* surface, RenderData data, const Ma
 {
     auto image = data ? (WgImage*)data : mPaintPool.image();
     if (!data) flags = RenderUpdateFlag::All;
+    ++mContext.frame.paintsPrepared;
 
     // update paint settings
     image->viewport = vport;
@@ -369,6 +390,7 @@ RenderData WgRenderer::prepare(RenderSurface* surface, RenderData data, const Ma
 bool WgRenderer::preRender()
 {
     if (mContext.invalid()) return false;
+    mRenderStarted = _now();
 
     mSolidBatch = {};
     mStencilBatch = {};
@@ -397,6 +419,7 @@ bool WgRenderer::preRender()
 bool WgRenderer::renderShape(RenderData data)
 {
     auto rdata = (WgShape*)data;
+    ++mContext.frame.paintsRendered;
 
     // A shape wholly outside the viewport draws nothing: leave it out of the frame's task list, so it is neither
     // staged nor encoded. Its meshes stay prepared for when the viewport comes back to it. One pixel of margin
@@ -405,12 +428,15 @@ bool WgRenderer::renderShape(RenderData data)
     const auto region = viewport();
     const auto& box = rdata->bbox;
     if (box.max.x + 1.0f < (float)region.xMin + mViewOffset.x || box.min.x - 1.0f > (float)region.xMax + mViewOffset.x ||
-        box.max.y + 1.0f < (float)region.yMin + mViewOffset.y || box.min.y - 1.0f > (float)region.yMax + mViewOffset.y) return true;
+        box.max.y + 1.0f < (float)region.yMin + mViewOffset.y || box.min.y - 1.0f > (float)region.yMax + mViewOffset.y) {
+        ++mContext.frame.paintsCulled;
+        return true;
+    }
 
     WgSceneTask* sceneTask = mSceneTaskStack.last();
 
-    if (mSolidBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList)) return true;
-    if (mStencilBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList, mViewOffset)) return true;
+    if (mSolidBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList, mContext.frame)) return true;
+    if (mStencilBatch.draw(sceneTask, rdata, mBlendMethod, mRenderTaskList, mViewOffset, mContext.frame)) return true;
 
     WgPaintTask* paintTask = new WgPaintTask(rdata, mBlendMethod);
     sceneTask->children.push(paintTask);
@@ -434,11 +460,16 @@ bool WgRenderer::renderImage(RenderData data)
 
 bool WgRenderer::postRender()
 {
+    auto& frame = mContext.frame;
+    auto staged = _now();
+    frame.renderMicroseconds += _microseconds(mRenderStarted, staged);
     WgSceneTask* sceneTaskRoot = mSceneTaskStack.last();
     sceneTaskRoot->stage(mCompositor);
 
     // flush stage data to gpu
     mCompositor.flush(mContext);
+    auto encoded = _now();
+    frame.stageMicroseconds += _microseconds(staged, encoded);
 
     // create command encoder for drawing
     WGPUCommandEncoder commandEncoder = mContext.createCommandEncoder();
@@ -446,10 +477,13 @@ bool WgRenderer::postRender()
     // run rendering (all the fun is here)
     sceneTaskRoot->clearBuffer = mClearBuffer;
     sceneTaskRoot->run(mContext, mCompositor, commandEncoder);
+    auto submitted = _now();
+    frame.encodeMicroseconds += _microseconds(encoded, submitted);
 
     // execute and release command encoder
     mContext.submitCommandEncoder(commandEncoder);
     mContext.releaseCommandEncoder(commandEncoder);
+    frame.submitMicroseconds += _microseconds(submitted, _now());
 
     // clear the render tasks tree
     mSceneTaskStack.pop();
@@ -528,6 +562,11 @@ bool WgRenderer::clear()
 bool WgRenderer::sync()
 {
     if (mContext.invalid()) return false;
+    struct SyncTimer {
+        uint32_t& total;
+        std::chrono::steady_clock::time_point started = _now();
+        ~SyncTimer() { total += _microseconds(started, _now()); }
+    } syncTimer{mContext.frame.syncMicroseconds};
 
     disposeObjects();
 

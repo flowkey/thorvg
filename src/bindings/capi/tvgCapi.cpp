@@ -132,6 +132,13 @@ TVG_API Tvg_Result tvg_wgcanvas_get_statistics(Tvg_Canvas canvas, Tvg_WgStatisti
     return result;
 }
 
+TVG_API Tvg_Result tvg_wgcanvas_get_frame_statistics(Tvg_Canvas canvas, Tvg_WgFrameStatistics* statistics)
+{
+    if (!canvas || !statistics) return TVG_RESULT_INVALID_ARGUMENT;
+    static_assert(sizeof(WgCanvas::FrameStatistics) == sizeof(Tvg_WgFrameStatistics), "the C and C++ frame statistics match");
+    return (Tvg_Result) reinterpret_cast<WgCanvas*>(canvas)->frameStatistics(*reinterpret_cast<WgCanvas::FrameStatistics*>(statistics));
+}
+
 TVG_API Tvg_Result tvg_wgcanvas_set_sample_count(Tvg_Canvas canvas, uint32_t samples)
 {
     if (canvas) return (Tvg_Result) reinterpret_cast<WgCanvas*>(canvas)->sampleCount(samples);

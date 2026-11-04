@@ -47,6 +47,8 @@ struct WgContext
     uint64_t textureBytes{};
     // samples per pixel of the anti-aliased passes (4, or 1 for none); the pipelines and render targets follow it
     uint32_t sampleCount = 4;
+    // the frames' counters since WgCanvas::frameStatistics last read them
+    WgCanvas::FrameStatistics frame{};
 
     void initialize(const WgCanvas::Context& ctx);
     void release();

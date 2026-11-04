@@ -197,6 +197,7 @@ bool Paint::Impl::render(RenderMethod* renderer, CompositionFlag flag)
 
 RenderData Paint::Impl::update(RenderMethod* renderer, const Matrix& pm, Array<RenderData>& clips, uint8_t opacity, RenderUpdateFlag flag, bool clipper)
 {
+    ++renderer->updateVisits;
     bool ret;
     PAINT_METHOD(ret, skip((flag | renderFlag)));
 

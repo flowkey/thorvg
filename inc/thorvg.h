@@ -2630,6 +2630,46 @@ struct TVG_API WgCanvas final : Canvas
     Result statistics(Statistics& statistics) const noexcept;
 
     /**
+     * @brief What the frames since the last call cost: counts and CPU times of the WebGPU engine's work.
+     *
+     * @note Experimental API
+     */
+    struct FrameStatistics
+    {
+        uint32_t paintsUpdated;          // paints the update traversal visited
+        uint32_t paintsPrepared;         // of those, paints the engine prepared again (changed)
+        uint32_t paintsRendered;         // shapes the draw traversal gave the engine
+        uint32_t paintsCulled;           // of those, left out as wholly outside the viewport
+        uint32_t batches;                // batched tasks encoded (several shapes in one draw sequence)
+        uint32_t batchedPaints;          // shapes in them
+        uint32_t singlePaints;           // shapes encoded on their own
+        uint32_t batchBreaksInterleaved; // a shape could not join the open batch because another task came after it
+        uint32_t batchBreaksFillRule;    // ... because its fill rule differs (stencil batches)
+        uint32_t batchBreaksOverlap;     // ... because it overlaps a shape of the batch (stencil batches)
+        uint32_t renderPasses;
+        uint32_t drawCalls;
+        uint32_t pipelineSets;
+        uint32_t bindGroupSets;
+        uint32_t otherCommands;          // vertex and index buffer, scissor and stencil reference sets
+        uint32_t bufferWrites;           // wgpuQueueWriteBuffer calls
+        uint64_t bufferWriteBytes;
+        uint32_t submits;
+        uint32_t renderMicroseconds;     // the draw traversal handing the shapes to the engine (culling, batching)
+        uint32_t stageMicroseconds;      // copying the drawn shapes' meshes and colors to the staging buffers and uploading them
+        uint32_t encodeMicroseconds;     // encoding the render passes
+        uint32_t submitMicroseconds;     // submitting the command buffer
+        uint32_t syncMicroseconds;       // sync(): the final blit to the target
+    };
+
+    /**
+     * @brief Reads the counters of the frames since the last call and starts new ones.
+     *
+     * @retval Result::NonSupport In case the wg engine is not supported.
+     * @note Experimental API
+     */
+    Result frameStatistics(FrameStatistics& statistics) noexcept;
+
+    /**
      * @brief Sets the samples per pixel of the anti-aliased drawing: 4 (the default) or 1.
      *
      * With 1 the paths are drawn without multisampling (aliased edges: there is no analytic anti-aliasing), and the
