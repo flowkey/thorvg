@@ -23,16 +23,26 @@
 #include <cassert>
 #include "tvgTaskScheduler.h"
 #include "tvgWgRenderer.h"
-#include <chrono>
+#ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+#else
+    #include <chrono>
+#endif
 
-static std::chrono::steady_clock::time_point _now()
+// microseconds of a monotonic clock, for the frame statistics. Emscripten reads performance.now(): its libc clock would
+// import WASI's clock_time_get a second time next to a host's own import of it.
+static double _now()
 {
-    return std::chrono::steady_clock::now();
+#ifdef __EMSCRIPTEN__
+    return emscripten_get_now() * 1000.0;
+#else
+    return std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now().time_since_epoch()).count();
+#endif
 }
 
-static uint32_t _microseconds(std::chrono::steady_clock::time_point from, std::chrono::steady_clock::time_point to)
+static uint32_t _microseconds(double from, double to)
 {
-    return (uint32_t)std::chrono::duration_cast<std::chrono::microseconds>(to - from).count();
+    return to > from ? (uint32_t)(to - from) : 0;
 }
 
 /************************************************************************/
@@ -564,7 +574,7 @@ bool WgRenderer::sync()
     if (mContext.invalid()) return false;
     struct SyncTimer {
         uint32_t& total;
-        std::chrono::steady_clock::time_point started = _now();
+        double started = _now();
         ~SyncTimer() { total += _microseconds(started, _now()); }
     } syncTimer{mContext.frame.syncMicroseconds};
 

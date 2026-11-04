@@ -23,7 +23,6 @@
 #ifndef _TVG_WG_RENDERER_H_
 #define _TVG_WG_RENDERER_H_
 
-#include <chrono>
 #include "tvgRender.h"
 #include "tvgWgSolidBatch.h"
 #include "tvgWgStencilBatch.h"
@@ -140,7 +139,7 @@ private:
     Array<ConfiguredSurface> mConfiguredSurfaces;
 
     bool mClearBuffer{};
-    std::chrono::steady_clock::time_point mRenderStarted{};  // when preRender began the frame's draw traversal
+    double mRenderStarted{};  // when preRender began the frame's draw traversal, in microseconds
     uint32_t mSurfaceConfigures{};
 };
 
