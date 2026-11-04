@@ -657,6 +657,18 @@ typedef struct {
 } Tvg_WgContext;
 
 /**
+ * @brief What the WebGPU engine of a canvas allocated so far: counters that only grow.
+ *
+ * @note Experimental API
+ */
+typedef struct
+{
+        uint32_t texturesCreated;    // textures created (render targets, stencil buffers, images)
+        uint32_t texturesDestroyed;  // textures destroyed; the difference is the number alive
+        uint32_t surfaceConfigures;  // calls to wgpuSurfaceConfigure
+} Tvg_WgStatistics;
+
+/**
  * @brief Creates a new WebGPU Canvas object with optional rendering engine settings.
  *
  * This method generates a WebGPU canvas instance that can be used for drawing vector graphics.
@@ -728,6 +740,17 @@ TVG_API Tvg_Result tvg_wgcanvas_set_target_with_context(Tvg_Canvas canvas, const
  * @note Experimental API
  */
 TVG_API Tvg_Result tvg_wgcanvas_set_view_offset(Tvg_Canvas canvas, float x, float y);
+
+/**
+ * @brief Reads what the canvas's WebGPU engine allocated so far (see Tvg_WgStatistics).
+ *
+ * @param[in] canvas The WebGPU canvas.
+ * @param[out] statistics The counters.
+ *
+ * @retval TVG_RESULT_NOT_SUPPORTED In case the wg engine is not supported.
+ * @note Experimental API
+ */
+TVG_API Tvg_Result tvg_wgcanvas_get_statistics(Tvg_Canvas canvas, Tvg_WgStatistics* statistics);
 
 /** \} */   // end defgroup ThorVGCapi_WgCanvas
 

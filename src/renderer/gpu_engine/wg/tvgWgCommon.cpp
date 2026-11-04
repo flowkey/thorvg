@@ -94,6 +94,7 @@ WGPUTexture WgContext::createTexture(uint32_t width, uint32_t height, WGPUTextur
         .dimension = WGPUTextureDimension_2D, .size = { width, height, 1 },
         .format = format, .mipLevelCount = 1, .sampleCount = 1
     };
+    ++texturesCreated;
     return wgpuDeviceCreateTexture(device, &textureDesc);
 }
 
@@ -105,6 +106,7 @@ WGPUTexture WgContext::createTexStorage(uint32_t width, uint32_t height, WGPUTex
         .dimension = WGPUTextureDimension_2D, .size = { width, height, 1 },
         .format = format, .mipLevelCount = 1, .sampleCount = 1
     };
+    ++texturesCreated;
     return wgpuDeviceCreateTexture(device, &textureDesc);
 }
 
@@ -116,6 +118,7 @@ WGPUTexture WgContext::createTexAttachement(uint32_t width, uint32_t height, WGP
         .dimension = WGPUTextureDimension_2D, .size = { width, height, 1 },
         .format = format, .mipLevelCount = 1, .sampleCount = sc
     };
+    ++texturesCreated;
     return wgpuDeviceCreateTexture(device, &textureDesc);
 }
 
@@ -149,6 +152,7 @@ void WgContext::releaseTexture(WGPUTexture& texture)
     if (texture) {
         wgpuTextureDestroy(texture);
         wgpuTextureRelease(texture);
+        ++texturesDestroyed;
         texture = nullptr;
     }
     

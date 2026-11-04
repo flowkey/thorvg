@@ -2606,6 +2606,28 @@ struct TVG_API WgCanvas final : Canvas
     Result viewOffset(float x, float y) noexcept;
 
     /**
+     * @brief What the WebGPU engine allocated so far: counters that only grow.
+     *
+     * @note Experimental API
+     */
+    struct Statistics
+    {
+        uint32_t texturesCreated;    // textures created (render targets, stencil buffers, images)
+        uint32_t texturesDestroyed;  // textures destroyed; the difference is the number alive
+        uint32_t surfaceConfigures;  // calls to wgpuSurfaceConfigure
+    };
+
+    /**
+     * @brief Reads the engine's allocation counters.
+     *
+     * @param[out] statistics The counters.
+     *
+     * @retval Result::NonSupport In case the wg engine is not supported.
+     * @note Experimental API
+     */
+    Result statistics(Statistics& statistics) const noexcept;
+
+    /**
      * @brief Sets the drawing target for the rasterization.
      *
      * @param[in] device WGPUDevice, a desired handle for the wgpu device.

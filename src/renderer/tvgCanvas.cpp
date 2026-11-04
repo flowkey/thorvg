@@ -267,6 +267,15 @@ Result WgCanvas::viewOffset(float x, float y) noexcept
     return Result::NonSupport;
 }
 
+Result WgCanvas::statistics(Statistics& statistics) const noexcept
+{
+#ifdef THORVG_WG_ENGINE_SUPPORT
+    static_cast<WgRenderer*>(pImpl->renderer)->statistics(statistics);
+    return Result::Success;
+#endif
+    return Result::NonSupport;
+}
+
 WgCanvas* WgCanvas::gen(EngineOption op) noexcept
 {
 #ifdef THORVG_WG_ENGINE_SUPPORT

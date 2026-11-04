@@ -40,6 +40,9 @@ struct WgContext
     WGPUSampler samplerLinearMirror;
     WGPUSampler samplerLinearClamp;
     WgBindGroupLayouts layouts;
+    // every texture this context created and destroyed, for WgCanvas::statistics
+    uint32_t texturesCreated{};
+    uint32_t texturesDestroyed{};
 
     void initialize(const WgCanvas::Context& ctx);
     void release();

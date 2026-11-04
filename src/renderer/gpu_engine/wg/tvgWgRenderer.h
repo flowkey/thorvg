@@ -65,6 +65,7 @@ struct WgRenderer : RenderMethod
     bool intersectsShape(RenderData data, const RenderRegion& region) override;
     Result target(const WgCanvas::Context& ctx, void* target, uint32_t w, uint32_t h, ColorSpace cs, int type = 0);
     void viewOffset(const Point& offset) { mViewOffset = offset; }
+    void statistics(WgCanvas::Statistics& statistics) const;
 
     //composition
     RenderCompositor* target(const RenderRegion& region, ColorSpace cs, CompositionFlag flags) override;
@@ -94,6 +95,8 @@ private:
 
     void clearTargets();
     void surfaceConfigure(RenderSurface& rsurface, WGPUSurface wsurface, WgContext& context);
+    void bindSurface(WGPUSurface wsurface);
+    void resizeRenderTargets(uint32_t w, uint32_t h);
     static WGPUTextureFormat targetFormat(const WgCanvas::Context& ctx, void* target, int type);
 
     RenderSurface mSurface;  // main surface
@@ -122,7 +125,19 @@ private:
     WGPUSurfaceTexture surfaceTexture{};
     WGPUSurface surface{};
 
+    // The surfaces configured so far, each with what it was configured with: binding one again at the same size and format
+    // configures nothing. A detach forgets them all (the host may release a surface after it, and a new one can reuse the handle).
+    struct ConfiguredSurface
+    {
+        WGPUSurface surface;
+        uint32_t width, height;
+        WGPUTextureFormat format;
+        bool opaque, premultiplied;
+    };
+    Array<ConfiguredSurface> mConfiguredSurfaces;
+
     bool mClearBuffer{};
+    uint32_t mSurfaceConfigures{};
 };
 
 #endif /* _TVG_WG_RENDERER_H_ */

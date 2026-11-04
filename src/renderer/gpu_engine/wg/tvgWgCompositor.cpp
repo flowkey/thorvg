@@ -131,18 +131,19 @@ void WgCompositor::releasePools(WgContext& context)
 
 
 void WgCompositor::resize(WgContext& context, uint32_t width, uint32_t height) {
+    // The same size keeps every handle: allocating again would leave the textures of that size unreleased.
+    if (this->width == width && this->height == height) return;
+
     // release existig handles
-    if (this->width != width || this->height != height) {
-        context.layouts.releaseBindGroup(bindGroupStorageTemp);
-        // release intermediate render target
-        targetTemp1.release(context);
-        targetTemp0.release(context);
-        // release global stencil buffer handles
-        context.releaseTextureView(texViewDepthStencilMS);
-        context.releaseTexture(texDepthStencilMS);
-        context.releaseTextureView(texViewDepthStencil);
-        context.releaseTexture(texDepthStencil);
-    }
+    context.layouts.releaseBindGroup(bindGroupStorageTemp);
+    // release intermediate render target
+    targetTemp1.release(context);
+    targetTemp0.release(context);
+    // release global stencil buffer handles
+    context.releaseTextureView(texViewDepthStencilMS);
+    context.releaseTexture(texDepthStencilMS);
+    context.releaseTextureView(texViewDepthStencil);
+    context.releaseTexture(texDepthStencil);
 
     this->width = width;
     this->height = height;

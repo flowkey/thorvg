@@ -119,6 +119,17 @@ TVG_API Tvg_Result tvg_wgcanvas_set_view_offset(Tvg_Canvas canvas, float x, floa
     return TVG_RESULT_INVALID_ARGUMENT;
 }
 
+TVG_API Tvg_Result tvg_wgcanvas_get_statistics(Tvg_Canvas canvas, Tvg_WgStatistics* statistics)
+{
+    if (!canvas || !statistics) return TVG_RESULT_INVALID_ARGUMENT;
+    WgCanvas::Statistics counters{};
+    auto result = (Tvg_Result) reinterpret_cast<WgCanvas*>(canvas)->statistics(counters);
+    statistics->texturesCreated = counters.texturesCreated;
+    statistics->texturesDestroyed = counters.texturesDestroyed;
+    statistics->surfaceConfigures = counters.surfaceConfigures;
+    return result;
+}
+
 TVG_API Tvg_Result tvg_wgcanvas_set_target_with_context(Tvg_Canvas canvas, const Tvg_WgContext* context, void* target, uint32_t w, uint32_t h, Tvg_Colorspace cs, int type)
 {
     if (canvas && context) {

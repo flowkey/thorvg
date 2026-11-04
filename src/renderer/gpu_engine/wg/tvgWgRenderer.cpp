@@ -197,11 +197,46 @@ void WgRenderer::clearTargets()
 {
     releaseSurfaceTexture();
     if (surface) wgpuSurfaceUnconfigure(surface);
+    mConfiguredSurfaces.clear();
     targetTexture = nullptr;
     surface = nullptr;
     mSurface.stride = 0;
     mSurface.w = 0;
     mSurface.h = 0;
+}
+
+void WgRenderer::bindSurface(WGPUSurface wsurface)
+{
+    ARRAY_FOREACH(p, mConfiguredSurfaces) {
+        if (p->surface != wsurface) continue;
+        if (p->width == mSurface.w && p->height == mSurface.h && p->format == mContext.format && p->opaque == mSurface.opaque) {
+            surface = wsurface;
+            mSurface.premultiplied = p->premultiplied;
+            return;
+        }
+        surfaceConfigure(mSurface, wsurface, mContext);
+        *p = {wsurface, mSurface.w, mSurface.h, mContext.format, mSurface.opaque, mSurface.premultiplied};
+        return;
+    }
+    surfaceConfigure(mSurface, wsurface, mContext);
+    mConfiguredSurfaces.push({wsurface, mSurface.w, mSurface.h, mContext.format, mSurface.opaque, mSurface.premultiplied});
+}
+
+void WgRenderer::resizeRenderTargets(uint32_t w, uint32_t h)
+{
+    if (mRenderTargetRoot.width == w && mRenderTargetRoot.height == h) return;
+    mRenderTargetPool.release(mContext);
+    mRenderTargetRoot.release(mContext);
+    mRenderTargetPool.initialize(w, h);
+    mRenderTargetRoot.initialize(mContext, w, h);
+    mCompositor.resize(mContext, w, h);
+}
+
+void WgRenderer::statistics(WgCanvas::Statistics& statistics) const
+{
+    statistics.texturesCreated = mContext.texturesCreated;
+    statistics.texturesDestroyed = mContext.texturesDestroyed;
+    statistics.surfaceConfigures = mSurfaceConfigures;
 }
 
 void WgRenderer::surfaceConfigure(RenderSurface& rsurface, WGPUSurface wsurface, WgContext& context)
@@ -250,6 +285,7 @@ void WgRenderer::surfaceConfigure(RenderSurface& rsurface, WGPUSurface wsurface,
     }
 
     wgpuSurfaceConfigure(wsurface, &surfaceConfig);
+    ++mSurfaceConfigures;
 }
 
 RenderData WgRenderer::prepare(const RenderShape& rshape, RenderData data, const Matrix& transform, const Array<RenderData>& clips, uint8_t opacity, RenderUpdateFlag flags, bool clipper)
@@ -578,15 +614,13 @@ Result WgRenderer::target(const WgCanvas::Context& ctx, void* target, uint32_t w
             mContext.format = format;
             mCompositor.updateTargetFormat(mContext);
         }
-        // update render targets dimensions
-        if ((mSurface.w != w) || (mSurface.h != h) || (type == 0 ? (surface != (WGPUSurface)target) : (targetTexture != (WGPUTexture)target))) {
-            mRenderTargetPool.release(mContext);
-            mRenderTargetRoot.release(mContext);
-            clearTargets();
-            mRenderTargetPool.initialize(w, h);
-            mRenderTargetRoot.initialize(mContext, w, h);
-            mCompositor.resize(mContext, w, h);
-        }
+        // The render targets depend on the size only: another target of the same size (a texture, or one of several
+        // surfaces drawn in turn) keeps them and only changes where the final blit goes. The surface left stays
+        // configured and keeps its picture.
+        releaseSurfaceTexture();
+        surface = nullptr;
+        targetTexture = nullptr;
+        resizeRenderTargets(w, h);
     }
 
     mSurface.stride = w;
@@ -598,7 +632,7 @@ Result WgRenderer::target(const WgCanvas::Context& ctx, void* target, uint32_t w
     mSurface.opaque = opaque;
 
     // configure surface (must be called after context creation)
-    if (type == 0) surfaceConfigure(mSurface, (WGPUSurface)target, mContext);
+    if (type == 0) bindSurface((WGPUSurface)target);
     else targetTexture = (WGPUTexture)target;
 
     return Result::Success;
