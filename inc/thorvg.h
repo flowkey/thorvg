@@ -2615,6 +2615,8 @@ struct TVG_API WgCanvas final : Canvas
         uint32_t texturesCreated;    // textures created (render targets, stencil buffers, images)
         uint32_t texturesDestroyed;  // textures destroyed; the difference is the number alive
         uint32_t surfaceConfigures;  // calls to wgpuSurfaceConfigure
+        uint64_t textureBytes;       // bytes of the textures alive now (4 bytes a texel and sample)
+        uint32_t intermediateTargets;  // composition targets alive: blending, masks, opacity groups and effects allocate them
     };
 
     /**
@@ -2626,6 +2628,22 @@ struct TVG_API WgCanvas final : Canvas
      * @note Experimental API
      */
     Result statistics(Statistics& statistics) const noexcept;
+
+    /**
+     * @brief Sets the samples per pixel of the anti-aliased drawing: 4 (the default) or 1.
+     *
+     * With 1 the paths are drawn without multisampling (aliased edges: there is no analytic anti-aliasing), and the
+     * render targets of plain painting take 8 bytes a pixel instead of 36 (no multisampled color and depth-stencil buffers).
+     *
+     * @param[in] samples 4 or 1.
+     *
+     * @retval Result::InvalidArguments For another count.
+     * @retval Result::InsufficientCondition When a target was set already with another count.
+     * @retval Result::NonSupport In case the wg engine is not supported.
+     * @note Call it before the first target().
+     * @note Experimental API
+     */
+    Result sampleCount(uint32_t samples) noexcept;
 
     /**
      * @brief Sets the drawing target for the rasterization.

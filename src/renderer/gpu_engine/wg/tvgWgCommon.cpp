@@ -94,8 +94,7 @@ WGPUTexture WgContext::createTexture(uint32_t width, uint32_t height, WGPUTextur
         .dimension = WGPUTextureDimension_2D, .size = { width, height, 1 },
         .format = format, .mipLevelCount = 1, .sampleCount = 1
     };
-    ++texturesCreated;
-    return wgpuDeviceCreateTexture(device, &textureDesc);
+    return counted(wgpuDeviceCreateTexture(device, &textureDesc), width, height, 1);
 }
 
 
@@ -106,8 +105,7 @@ WGPUTexture WgContext::createTexStorage(uint32_t width, uint32_t height, WGPUTex
         .dimension = WGPUTextureDimension_2D, .size = { width, height, 1 },
         .format = format, .mipLevelCount = 1, .sampleCount = 1
     };
-    ++texturesCreated;
-    return wgpuDeviceCreateTexture(device, &textureDesc);
+    return counted(wgpuDeviceCreateTexture(device, &textureDesc), width, height, 1);
 }
 
 
@@ -118,8 +116,22 @@ WGPUTexture WgContext::createTexAttachement(uint32_t width, uint32_t height, WGP
         .dimension = WGPUTextureDimension_2D, .size = { width, height, 1 },
         .format = format, .mipLevelCount = 1, .sampleCount = sc
     };
+    return counted(wgpuDeviceCreateTexture(device, &textureDesc), width, height, sc);
+}
+
+
+// Every format the engine creates takes 4 bytes a texel (Depth24PlusStencil8 nominally; a backend may pad it).
+static uint64_t _textureBytes(uint32_t width, uint32_t height, uint32_t samples)
+{
+    return uint64_t(width) * height * 4 * samples;
+}
+
+
+WGPUTexture WgContext::counted(WGPUTexture texture, uint32_t width, uint32_t height, uint32_t samples)
+{
     ++texturesCreated;
-    return wgpuDeviceCreateTexture(device, &textureDesc);
+    textureBytes += _textureBytes(width, height, samples);
+    return texture;
 }
 
 
@@ -150,6 +162,7 @@ void WgContext::releaseTextureView(WGPUTextureView& textureView)
 void WgContext::releaseTexture(WGPUTexture& texture)
 {
     if (texture) {
+        textureBytes -= _textureBytes(wgpuTextureGetWidth(texture), wgpuTextureGetHeight(texture), wgpuTextureGetSampleCount(texture));
         wgpuTextureDestroy(texture);
         wgpuTextureRelease(texture);
         ++texturesDestroyed;

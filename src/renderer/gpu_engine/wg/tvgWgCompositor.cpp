@@ -134,16 +134,10 @@ void WgCompositor::resize(WgContext& context, uint32_t width, uint32_t height) {
     // The same size keeps every handle: allocating again would leave the textures of that size unreleased.
     if (this->width == width && this->height == height) return;
 
-    // release existig handles
-    context.layouts.releaseBindGroup(bindGroupStorageTemp);
-    // release intermediate render target
-    targetTemp1.release(context);
-    targetTemp0.release(context);
+    releaseIntermediates(context);
     // release global stencil buffer handles
     context.releaseTextureView(texViewDepthStencilMS);
     context.releaseTexture(texDepthStencilMS);
-    context.releaseTextureView(texViewDepthStencil);
-    context.releaseTexture(texDepthStencil);
 
     this->width = width;
     this->height = height;
@@ -152,16 +146,33 @@ void WgCompositor::resize(WgContext& context, uint32_t width, uint32_t height) {
     if (width > 0 && height > 0) {
         // update global view matrix handles
         updateViewMat(context, width, height);
-        // allocate global stencil buffer handles
+        // the depth-stencil buffer of the anti-aliased passes, with their sample count
+        texDepthStencilMS = context.createTexAttachement(width, height, WGPUTextureFormat_Depth24PlusStencil8, context.sampleCount);
+        texViewDepthStencilMS = context.createTextureView(texDepthStencilMS);
+    }
+}
+
+
+void WgCompositor::prepareIntermediates(WgContext& context)
+{
+    if (targetTemp0.texture || width == 0 || height == 0) return;
+    // single-sampled passes need their own depth-stencil buffer unless the anti-aliased one is single-sampled too
+    if (context.sampleCount > 1) {
         texDepthStencil = context.createTexAttachement(width, height, WGPUTextureFormat_Depth24PlusStencil8, 1);
         texViewDepthStencil = context.createTextureView(texDepthStencil);
-        texDepthStencilMS = context.createTexAttachement(width, height, WGPUTextureFormat_Depth24PlusStencil8, 4);
-        texViewDepthStencilMS = context.createTextureView(texDepthStencilMS);
-        // initialize intermediate render targets
-        targetTemp0.initialize(context, width, height);
-        targetTemp1.initialize(context, width, height);
-        bindGroupStorageTemp = context.layouts.createBindGroupStrorage2RO(targetTemp0.texView, targetTemp1.texView);
     }
+    // only sampled, copied and drawn by single-sampled passes: no multisampled twin
+    targetTemp0.initialize(context, width, height, 1);
+    targetTemp1.initialize(context, width, height, 1);
+}
+
+
+void WgCompositor::releaseIntermediates(WgContext& context)
+{
+    targetTemp1.release(context);
+    targetTemp0.release(context);
+    context.releaseTextureView(texViewDepthStencil);
+    context.releaseTexture(texDepthStencil);
 }
 
 
@@ -208,7 +219,7 @@ void WgCompositor::beginRenderPassMS(WGPUCommandEncoder commandEncoder, WgRender
     const WGPURenderPassColorAttachment colorAttachment{
         .view = target->texViewMS,
         .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
-        .resolveTarget = target->texView,
+        .resolveTarget = target->textureMS ? target->texView : nullptr,  // single-sampled: drawn in place
         .loadOp = clearBuffer ? WGPULoadOp_Clear : WGPULoadOp_Load,
         .storeOp = WGPUStoreOp_Store,
         .clearValue = {0.0, 0.0, 0.0, 0.0}};
@@ -223,7 +234,7 @@ void WgCompositor::beginRenderPass(WGPUCommandEncoder encoder, WgRenderTarget* t
     assert(!renderPassEncoder);
     currentTarget = target;
     const WGPURenderPassDepthStencilAttachment depthStencilAttachment{
-        .view = texViewDepthStencil,
+        .view = texViewDepthStencil ? texViewDepthStencil : texViewDepthStencilMS,  // single-sampled either way
         .depthLoadOp = WGPULoadOp_Load,
         .depthStoreOp = WGPUStoreOp_Discard,
         .stencilLoadOp = WGPULoadOp_Load,
@@ -519,20 +530,13 @@ void WgCompositor::composeScene(WgContext& context, WgRenderTarget* src, WgRende
 
 void WgCompositor::blit(WgContext& context, WGPUCommandEncoder encoder, WgRenderTarget* src, WGPUTextureView dstView, bool premultiplied, bool clearBuffer)
 {
-    const WGPURenderPassDepthStencilAttachment depthStencilAttachment{
-        .view = texViewDepthStencil,
-        .depthLoadOp = WGPULoadOp_Load,
-        .depthStoreOp = WGPUStoreOp_Discard,
-        .stencilLoadOp = WGPULoadOp_Load,
-        .stencilStoreOp = WGPUStoreOp_Discard
-    };
     const WGPURenderPassColorAttachment colorAttachment{
         .view = dstView,
         .depthSlice = WGPU_DEPTH_SLICE_UNDEFINED,
         .loadOp = clearBuffer ? WGPULoadOp_Clear : WGPULoadOp_Load,
         .storeOp = WGPUStoreOp_Store,
         .clearValue = {0.0, 0.0, 0.0, 0.0}};
-    const WGPURenderPassDescriptor renderPassDesc{ .colorAttachmentCount = 1, .colorAttachments = &colorAttachment, .depthStencilAttachment = &depthStencilAttachment };
+    const WGPURenderPassDescriptor renderPassDesc{ .colorAttachmentCount = 1, .colorAttachments = &colorAttachment };
     renderPassEncoder = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
     wgpuRenderPassEncoderSetBindGroup(renderPassEncoder, 0, src->bgTexture, 0, nullptr);
     wgpuRenderPassEncoderSetPipeline(renderPassEncoder, premultiplied ? pipelines.blit : pipelines.blitUnpremultiplied);
@@ -615,6 +619,7 @@ void WgCompositor::drawShape(WgContext& context, WgShape* rdata)
 
 void WgCompositor::blendShape(WgContext& context, WgShape* rdata, BlendMethod blendMethod)
 {
+    prepareIntermediates(context);
     if (!rdata->shape.setting.valid || rdata->shape.mesh.vbuffer.empty() || rdata->viewport.invalid()) return;
     WgRenderSettings& settings = rdata->shape.setting;
     // copy current render target data to dst target
@@ -722,6 +727,7 @@ void WgCompositor::drawStrokes(WgContext& context, WgShape* rdata)
 
 void WgCompositor::blendStrokes(WgContext& context, WgShape* rdata, BlendMethod blendMethod)
 {
+    prepareIntermediates(context);
     if (!rdata->stroke.setting.valid || rdata->stroke.mesh.vbuffer.empty() || rdata->viewport.invalid()) return;
     WgRenderSettings& settings = rdata->stroke.setting;
     auto strokeView = stageBufferViewMat[rdata->strokeViewMatIdx];
@@ -770,6 +776,7 @@ void WgCompositor::drawImage(WgContext& context, WgImage* rdata)
 
 void WgCompositor::blendImage(WgContext& context, WgImage* rdata, BlendMethod blendMethod)
 {
+    prepareIntermediates(context);
     if (rdata->viewport.invalid() || !rdata->bindGroup) return;
     WgRenderSettings& settings = rdata->setting;
     wgpuRenderPassEncoderSetScissorRect(renderPassEncoder, rdata->viewport.x(), rdata->viewport.y(), rdata->viewport.w(), rdata->viewport.h());
@@ -833,6 +840,7 @@ void WgCompositor::drawScene(WgContext& context, WgRenderTarget* scene, WgCompos
 
 void WgCompositor::blendScene(WgContext& context, WgRenderTarget* scene, WgCompose* compose)
 {
+    prepareIntermediates(context);
     // copy current render target data to dst target
     WgRenderTarget *target = currentTarget;
     endRenderPass();
@@ -932,6 +940,7 @@ void WgCompositor::clearClipPath(WgContext& context, WgPaint* paint)
 
 bool WgCompositor::motionBlur(WgContext& context, WgRenderTarget* dst, const RenderEffectMotionBlur* motion, const WgCompose* compose)
 {
+    prepareIntermediates(context);
     auto effect = (WgRenderEffect*)motion->rd;
     auto aabb = shrinkRenderRegion(compose->aabb);
     if (aabb.invalid()) return true;
@@ -957,6 +966,7 @@ bool WgCompositor::motionBlur(WgContext& context, WgRenderTarget* dst, const Ren
 
 bool WgCompositor::gaussianBlur(WgContext& context, WgRenderTarget* dst, const RenderEffectGaussianBlur* blur, const WgCompose* compose)
 {
+    prepareIntermediates(context);
     auto effect = (WgRenderEffect*)blur->rd;
     auto aabb = shrinkRenderRegion(compose->aabb);
 
@@ -999,6 +1009,7 @@ bool WgCompositor::gaussianBlur(WgContext& context, WgRenderTarget* dst, const R
 
 bool WgCompositor::dropShadow(WgContext& context, WgRenderTarget* dst, const RenderEffectDropShadow* shadow, const WgCompose* compose)
 {
+    prepareIntermediates(context);
     auto effect = (WgRenderEffect*)shadow->rd;
     auto aabb = shrinkRenderRegion(compose->aabb);
 
@@ -1037,6 +1048,7 @@ bool WgCompositor::dropShadow(WgContext& context, WgRenderTarget* dst, const Ren
 
 bool WgCompositor::fillEffect(WgContext& context, WgRenderTarget* dst, const RenderEffectFill* fill, const WgCompose* compose)
 {
+    prepareIntermediates(context);
     auto effect = (WgRenderEffect*)fill->rd;
     auto aabb = shrinkRenderRegion(compose->aabb);
 
@@ -1054,6 +1066,7 @@ bool WgCompositor::fillEffect(WgContext& context, WgRenderTarget* dst, const Ren
 
 bool WgCompositor::tintEffect(WgContext& context, WgRenderTarget* dst, const RenderEffectTint* tint, const WgCompose* compose)
 {
+    prepareIntermediates(context);
     auto effect = (WgRenderEffect*)tint->rd;
     auto aabb = shrinkRenderRegion(compose->aabb);
 
@@ -1071,6 +1084,7 @@ bool WgCompositor::tintEffect(WgContext& context, WgRenderTarget* dst, const Ren
 
 bool WgCompositor::tritoneEffect(WgContext& context, WgRenderTarget* dst, const RenderEffectTritone* tritone, const WgCompose* compose)
 {
+    prepareIntermediates(context);
     auto effect = (WgRenderEffect*)tritone->rd;
     auto aabb = shrinkRenderRegion(compose->aabb);
 

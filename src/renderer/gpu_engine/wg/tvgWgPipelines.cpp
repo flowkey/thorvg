@@ -106,7 +106,8 @@ WGPURenderPipeline WgPipelines::createRenderPipeline(
         .layout = pipelineLayout,
         .vertex = vertexState,
         .primitive = primitiveState,
-        .depthStencil = &depthStencilState,
+        // a state without a format: the pipeline has no depth-stencil attachment
+        .depthStencil = depthStencilState.format == WGPUTextureFormat_Undefined ? nullptr : &depthStencilState,
         .multisample = multisampleState,
         .fragment = &fragmentState
     };
@@ -125,7 +126,7 @@ WGPURenderPipeline WgPipelines::createBlendPipeline(
         WGPUCompareFunction_Always, WGPUOptionalBool_False,
         stencilCompare,
         WGPUStencilOperation_Zero);
-    const WGPUMultisampleState multisampleState{.count = 4, .mask = 0xFFFFFFFF, .alphaToCoverageEnabled = false};
+    const WGPUMultisampleState multisampleState{.count = context.sampleCount, .mask = 0xFFFFFFFF, .alphaToCoverageEnabled = false};
 
     return createRenderPipeline(
         context.device, pipelineLabel,
@@ -173,7 +174,7 @@ WGPURenderPipeline WgPipelines::clippedStroke(WgContext& context, WgRenderSettin
         const WGPUBlendComponent blendComponent{.operation = WGPUBlendOperation_Add, .srcFactor = WGPUBlendFactor_One, .dstFactor = WGPUBlendFactor_OneMinusSrcAlpha};
         const WGPUBlendState blendState{.color = blendComponent, .alpha = blendComponent};
         const auto depthStencilState = _depthOnlyState(WGPUCompareFunction_Equal);
-        const WGPUMultisampleState multisampleState{.count = 4, .mask = 0xFFFFFFFF, .alphaToCoverageEnabled = false};
+        const WGPUMultisampleState multisampleState{.count = context.sampleCount, .mask = 0xFFFFFFFF, .alphaToCoverageEnabled = false};
         pipeline = createRenderPipeline(
             context.device, "The render pipeline clipped stroke",
             shaders[index], "vs_main", "fs_main",
@@ -251,16 +252,17 @@ void WgPipelines::createBlitPipelines(WgContext& context)
     const WGPUMultisampleState multisampleStateX1{nullptr, 1, 0xFFFFFFFF, false};
     WGPUBlendComponent blendComponentSrc{WGPUBlendOperation_Add, WGPUBlendFactor_One, WGPUBlendFactor_Zero};
     const WGPUBlendState blendStateSrc{blendComponentSrc, blendComponentSrc};
-    const WGPUDepthStencilState depthStencilStateScene = makeDepthStencilState(WGPUCompareFunction_Always, WGPUOptionalBool_False,  WGPUCompareFunction_Always, WGPUStencilOperation_Zero);
+    // the blit pass has no depth-stencil attachment, so no single-sampled depth-stencil buffer is needed for it
+    const WGPUDepthStencilState noDepthStencil{};
 
     blit = createRenderPipeline(context.device, "The render pipeline blit", shaderBlit, "vs_main", "fs_main", layoutBlit, vertexBufferLayoutsImage, 2,
                                 WGPUColorWriteMask_All, context.format, blendStateSrc,  // the target's format
-                                depthStencilStateScene, multisampleStateX1);
+                                noDepthStencil, multisampleStateX1);
 
     // TODO: either premultiplied blit or unpremultplied bit used.
     blitUnpremultiplied = createRenderPipeline(context.device, "The render pipeline blit unpremultiplied", shaderBlit, "vs_main", "fs_main_unpremultiplied", layoutBlit, vertexBufferLayoutsImage, 2,
                                                WGPUColorWriteMask_All, context.format, blendStateSrc,  // the target's format
-                                               depthStencilStateScene, multisampleStateX1);
+                                               noDepthStencil, multisampleStateX1);
 }
 
 
@@ -275,7 +277,7 @@ void WgPipelines::updateTargetFormat(WgContext& context)
 void WgPipelines::initialize(WgContext& context)
 {
     // common pipeline settings
-    const WGPUMultisampleState multisampleState{nullptr, 4, 0xFFFFFFFF, false};
+    const WGPUMultisampleState multisampleState{nullptr, context.sampleCount, 0xFFFFFFFF, false};
     const WGPUMultisampleState multisampleStateX1{nullptr, 1, 0xFFFFFFFF, false};
     const WGPUTextureFormat offscreenTargetFormat = WGPUTextureFormat_RGBA8Unorm;
 

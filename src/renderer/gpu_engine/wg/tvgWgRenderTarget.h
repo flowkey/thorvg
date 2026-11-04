@@ -35,7 +35,9 @@ struct WgRenderTarget
     WGPUBindGroup bgTextureLinear{};  // Linear + clamp for subpixel sampling, such as motion blur.
     uint32_t width{}, height{};
 
-    void initialize(WgContext& context, uint32_t width, uint32_t height);
+    // samples > 1 adds the multisampled texture the anti-aliased passes draw into and resolve to texture; with 1 they
+    // draw into texture itself (texViewMS is texView)
+    void initialize(WgContext& context, uint32_t width, uint32_t height, uint32_t samples);
     WGPUBindGroup getBindGroupTextureLinear(WgContext& context);
     void release(WgContext& context);
 };

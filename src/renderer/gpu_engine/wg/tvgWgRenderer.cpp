@@ -228,7 +228,7 @@ void WgRenderer::resizeRenderTargets(uint32_t w, uint32_t h)
     mRenderTargetPool.release(mContext);
     mRenderTargetRoot.release(mContext);
     mRenderTargetPool.initialize(w, h);
-    mRenderTargetRoot.initialize(mContext, w, h);
+    mRenderTargetRoot.initialize(mContext, w, h, mContext.sampleCount);
     mCompositor.resize(mContext, w, h);
 }
 
@@ -237,6 +237,18 @@ void WgRenderer::statistics(WgCanvas::Statistics& statistics) const
     statistics.texturesCreated = mContext.texturesCreated;
     statistics.texturesDestroyed = mContext.texturesDestroyed;
     statistics.surfaceConfigures = mSurfaceConfigures;
+    statistics.textureBytes = mContext.textureBytes;
+    statistics.intermediateTargets = (mCompositor.intermediatesAllocated() ? 2 : 0) + mRenderTargetPool.list.count;
+}
+
+Result WgRenderer::sampleCount(uint32_t samples)
+{
+    if (samples != 1 && samples != 4) return Result::InvalidArguments;
+    if (samples == mContext.sampleCount) return Result::Success;
+    // the pipelines and render targets are made for one sample count, when the first target is set
+    if (mContext.queue) return Result::InsufficientCondition;
+    mContext.sampleCount = samples;
+    return Result::Success;
 }
 
 void WgRenderer::surfaceConfigure(RenderSurface& rsurface, WGPUSurface wsurface, WgContext& context)
@@ -606,7 +618,7 @@ Result WgRenderer::target(const WgCanvas::Context& ctx, void* target, uint32_t w
         mContext.format = format;
         mContext.initialize(ctx);
         mRenderTargetPool.initialize(w, h);
-        mRenderTargetRoot.initialize(mContext, w, h);
+        mRenderTargetRoot.initialize(mContext, w, h, mContext.sampleCount);
         mCompositor.initialize(mContext, w, h);
     } else {
         // only the final blit depends on the target format, so prepared paints stay valid

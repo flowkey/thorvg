@@ -666,6 +666,8 @@ typedef struct
         uint32_t texturesCreated;    // textures created (render targets, stencil buffers, images)
         uint32_t texturesDestroyed;  // textures destroyed; the difference is the number alive
         uint32_t surfaceConfigures;  // calls to wgpuSurfaceConfigure
+        uint64_t textureBytes;       // bytes of the textures alive now (4 bytes a texel and sample)
+        uint32_t intermediateTargets;  // composition targets alive: blending, masks, opacity groups and effects allocate them
 } Tvg_WgStatistics;
 
 /**
@@ -751,6 +753,20 @@ TVG_API Tvg_Result tvg_wgcanvas_set_view_offset(Tvg_Canvas canvas, float x, floa
  * @note Experimental API
  */
 TVG_API Tvg_Result tvg_wgcanvas_get_statistics(Tvg_Canvas canvas, Tvg_WgStatistics* statistics);
+
+/**
+ * @brief Sets the samples per pixel of the anti-aliased drawing: 4 (the default) or 1 (aliased, no multisampled buffers).
+ *
+ * @param[in] canvas The WebGPU canvas.
+ * @param[in] samples 4 or 1.
+ *
+ * @retval TVG_RESULT_INVALID_ARGUMENT For another count.
+ * @retval TVG_RESULT_INSUFFICIENT_CONDITION When a target was set already with another count.
+ * @retval TVG_RESULT_NOT_SUPPORTED In case the wg engine is not supported.
+ * @note Call it before the first target.
+ * @note Experimental API
+ */
+TVG_API Tvg_Result tvg_wgcanvas_set_sample_count(Tvg_Canvas canvas, uint32_t samples);
 
 /** \} */   // end defgroup ThorVGCapi_WgCanvas
 

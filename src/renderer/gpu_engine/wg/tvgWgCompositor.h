@@ -63,10 +63,9 @@ private:
     WGPURenderPassEncoder renderPassEncoder{};
     WGPUCommandEncoder commandEncoder{};
     WgRenderTarget* currentTarget{};
-    // intermediate render targets
+    // intermediate render targets, single-sampled, for blending and effects: allocated on first use (prepareIntermediates)
     WgRenderTarget targetTemp0;
     WgRenderTarget targetTemp1;
-    WGPUBindGroup bindGroupStorageTemp{};
     // composition and blend geometries
     WgMesh meshDataBlit;
     // render target dimensions
@@ -106,7 +105,13 @@ private:
     void renderClipPath(WgContext& context, WgPaint* paint);
     void clearClipPath(WgContext& context, WgPaint* paint);
     void updateViewMat(WgContext& context, uint32_t width, uint32_t height);
+    // allocates the intermediate targets, and the single-sampled depth-stencil buffer of their passes, unless they exist:
+    // only blending and effects use them, so plain painting never allocates them. Once allocated they stay until resize.
+    void prepareIntermediates(WgContext& context);
+    void releaseIntermediates(WgContext& context);
 public:
+    // whether the intermediate targets were allocated (something blended or had an effect since the last resize)
+    bool intermediatesAllocated() const { return targetTemp0.texture != nullptr; }
     // moves the view in mesh coordinates: the vertex stage subtracts the offset (WgCanvas::viewOffset)
     void viewOffset(WgContext& context, const Point& offset);
     void initialize(WgContext& context, uint32_t width, uint32_t height);

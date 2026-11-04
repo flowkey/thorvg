@@ -66,6 +66,7 @@ struct WgRenderer : RenderMethod
     Result target(const WgCanvas::Context& ctx, void* target, uint32_t w, uint32_t h, ColorSpace cs, int type = 0);
     void viewOffset(const Point& offset) { mViewOffset = offset; }
     void statistics(WgCanvas::Statistics& statistics) const;
+    Result sampleCount(uint32_t samples);
 
     //composition
     RenderCompositor* target(const RenderRegion& region, ColorSpace cs, CompositionFlag flags) override;

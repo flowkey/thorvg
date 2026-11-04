@@ -22,14 +22,16 @@
 
 #include "tvgWgRenderTarget.h"
 
-void WgRenderTarget::initialize(WgContext& context, uint32_t width, uint32_t height)
+void WgRenderTarget::initialize(WgContext& context, uint32_t width, uint32_t height, uint32_t samples)
 {
     this->width = width;
     this->height = height;
     texture = context.createTexStorage(width, height, WGPUTextureFormat_RGBA8Unorm);
-    textureMS = context.createTexAttachement(width, height, WGPUTextureFormat_RGBA8Unorm, 4);
     texView = context.createTextureView(texture);
-    texViewMS = context.createTextureView(textureMS);
+    if (samples > 1) {
+        textureMS = context.createTexAttachement(width, height, WGPUTextureFormat_RGBA8Unorm, samples);
+        texViewMS = context.createTextureView(textureMS);
+    } else texViewMS = texView;
     bgRead = context.layouts.createBindGroupStrorage1RO(texView);
     bgWrite = context.layouts.createBindGroupStrorage1WO(texView);
     bgTexture = context.layouts.createBindGroupTexSampled(context.samplerNearestRepeat, texView);
@@ -49,7 +51,8 @@ void WgRenderTarget::release(WgContext& context)
     context.layouts.releaseBindGroup(bgTexture);
     context.layouts.releaseBindGroup(bgWrite);
     context.layouts.releaseBindGroup(bgRead);
-    context.releaseTextureView(texViewMS);
+    if (textureMS) context.releaseTextureView(texViewMS);
+    else texViewMS = nullptr;
     context.releaseTexture(textureMS);
     context.releaseTextureView(texView);
     context.releaseTexture(texture);
@@ -66,7 +69,7 @@ WgRenderTarget* WgRenderTargetPool::allocate(WgContext& context)
     if (!pool.empty()) return pool.pick();
 
     auto renderTarget = new WgRenderTarget;
-    renderTarget->initialize(context, width, height);
+    renderTarget->initialize(context, width, height, context.sampleCount);
     list.push(renderTarget);
 
     return renderTarget;

@@ -127,7 +127,15 @@ TVG_API Tvg_Result tvg_wgcanvas_get_statistics(Tvg_Canvas canvas, Tvg_WgStatisti
     statistics->texturesCreated = counters.texturesCreated;
     statistics->texturesDestroyed = counters.texturesDestroyed;
     statistics->surfaceConfigures = counters.surfaceConfigures;
+    statistics->textureBytes = counters.textureBytes;
+    statistics->intermediateTargets = counters.intermediateTargets;
     return result;
+}
+
+TVG_API Tvg_Result tvg_wgcanvas_set_sample_count(Tvg_Canvas canvas, uint32_t samples)
+{
+    if (canvas) return (Tvg_Result) reinterpret_cast<WgCanvas*>(canvas)->sampleCount(samples);
+    return TVG_RESULT_INVALID_ARGUMENT;
 }
 
 TVG_API Tvg_Result tvg_wgcanvas_set_target_with_context(Tvg_Canvas canvas, const Tvg_WgContext* context, void* target, uint32_t w, uint32_t h, Tvg_Colorspace cs, int type)

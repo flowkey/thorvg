@@ -43,6 +43,10 @@ struct WgContext
     // every texture this context created and destroyed, for WgCanvas::statistics
     uint32_t texturesCreated{};
     uint32_t texturesDestroyed{};
+    // the bytes of the textures alive now (texels times bytes per texel times samples), for WgCanvas::statistics
+    uint64_t textureBytes{};
+    // samples per pixel of the anti-aliased passes (4, or 1 for none); the pipelines and render targets follow it
+    uint32_t sampleCount = 4;
 
     void initialize(const WgCanvas::Context& ctx);
     void release();
@@ -77,6 +81,8 @@ struct WgContext
 
     void submit();
     bool invalid();
+private:
+    WGPUTexture counted(WGPUTexture texture, uint32_t width, uint32_t height, uint32_t samples);
 };
 
 #endif // _TVG_WG_COMMON_H_
