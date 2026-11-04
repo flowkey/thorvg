@@ -165,6 +165,7 @@ static StrictKey _rendererMtx;
 void WgRenderer::release()
 {
     if (!mContext.queue) return;
+    ++mContextGeneration;
 
     disposeObjects();
     mTextures.clear(mContext);
@@ -666,6 +667,7 @@ Result WgRenderer::target(const WgCanvas::Context& ctx, void* target, uint32_t w
         release();
         mContext.format = format;
         mContext.initialize(ctx);
+        ++mContextGeneration;
         mRenderTargetPool.initialize(w, h);
         mRenderTargetRoot.initialize(mContext, w, h, mContext.sampleCount);
         mCompositor.initialize(mContext, w, h);

@@ -67,6 +67,8 @@ struct WgRenderer : RenderMethod
     void viewOffset(const Point& offset) { mViewOffset = offset; }
     void statistics(WgCanvas::Statistics& statistics) const;
     Result sampleCount(uint32_t samples);
+    // changes whenever the context, and with it every prepared paint's GPU data, is made or released
+    uint32_t contextGeneration() const { return mContextGeneration; }
     void frameStatistics(WgCanvas::FrameStatistics& statistics);
 
     //composition
@@ -139,6 +141,7 @@ private:
     Array<ConfiguredSurface> mConfiguredSurfaces;
 
     bool mClearBuffer{};
+    uint32_t mContextGeneration{};
     double mRenderStarted{};  // when preRender began the frame's draw traversal, in microseconds
     uint32_t mSurfaceConfigures{};
 };

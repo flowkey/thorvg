@@ -243,12 +243,22 @@ Result WgCanvas::target(const Context& context, void* target, uint32_t w, uint32
 #ifdef THORVG_WG_ENGINE_SUPPORT
     if (pImpl->status == Status::Updating || pImpl->status == Status::Drawing) return Result::InsufficientCondition;
 
-    auto ret = static_cast<WgRenderer*>(pImpl->renderer)->target(context, target, w, h, cs, type);
+    auto renderer = static_cast<WgRenderer*>(pImpl->renderer);
+    auto generation = renderer->contextGeneration();
+    auto previousColorSpace = renderer->colorSpace();
+    auto ret = renderer->target(context, target, w, h, cs, type);
     if (ret != Result::Success) return ret;
 
-    pImpl->vport = {0, 0, (int32_t)w, (int32_t)h};
+    // A detach that keeps the context keeps the viewport and the prepared paints for the next target.
+    if (!target && generation == renderer->contextGeneration()) return Result::Success;
+
+    // The prepared paints depend on the viewport, the color space and the context, not on which target is drawn into:
+    // another target of the same size only changes where the final blit goes (drawing several targets in turn).
+    RenderRegion viewport = {0, 0, (int32_t)w, (int32_t)h};
+    auto damaged = !(pImpl->vport == viewport) || previousColorSpace != renderer->colorSpace() || generation != renderer->contextGeneration();
+    pImpl->vport = viewport;
     pImpl->renderer->viewport(pImpl->vport);
-    pImpl->status = Status::Damaged;  // Paints must be updated again with this new target.
+    if (damaged) pImpl->status = Status::Damaged;  // Paints must be updated again with this new target.
 
     //FIXME: The value must be associated with an individual canvas instance.
     BitmapLoader::cs = static_cast<ColorSpace>(cs);
