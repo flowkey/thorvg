@@ -15,7 +15,7 @@ jobs:
   build_simulator_x86_64:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         submodules: true
 
@@ -36,7 +36,7 @@ jobs:
         meson setup build -Dlog=true -Dloaders=all -Dsavers=all -Dbindings=capi -Dstatic=true -Dextra="lottie_exp" --cross-file ./cross/ios_simulator_x86_64.txt
         ninja -C build install
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: result_simulator_x86_64
         path: build/src/libthorvg*
@@ -44,7 +44,7 @@ jobs:
   build_simulator_arm64:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         submodules: true
 
@@ -65,7 +65,7 @@ jobs:
         meson setup build -Dlog=true -Dloaders=all -Dsavers=all -Dbindings=capi -Dstatic=true -Dextra="lottie_exp" --cross-file ./cross/ios_simulator_arm64.txt
         ninja -C build install
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: result_simulator_arm64
         path: build/src/libthorvg*
@@ -73,7 +73,7 @@ jobs:
   build_arm64:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         submodules: true
 
@@ -94,7 +94,7 @@ jobs:
         meson setup build -Dlog=true -Dloaders=all -Dsavers=all -Dbindings=capi -Dstatic=true -Dextra="lottie_exp" --cross-file ./cross/ios_arm64.txt
         ninja -C build install
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: result_arm64
         path: build/src/libthorvg*
