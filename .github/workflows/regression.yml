@@ -13,7 +13,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install things
         run: |
           sudo apt-get update
@@ -62,7 +62,7 @@ jobs:
           mv test/regression/settings_comparison.toml settings.toml
 
       - name: Store Crashing/Leaking/Timing out Images
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: crashing-leaking-timeouting-images
           path: BrokenFILES
@@ -89,14 +89,14 @@ jobs:
           ./svg_tester 2>&1 | tee result_valid_files.txt
 
       - name: Store Broken Images for valid inputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: differences-in-valid-files
           path: BrokenSVG
           if-no-files-found: ignore
 
       - name: Store Problematic Images for valid inputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: problematic-images-in-valid-files
           path: ProblematicSVG
@@ -124,14 +124,14 @@ jobs:
           ./svg_tester 2>&1 | tee result_not_valid_files.txt
 
       - name: Store Broken Images for not valid inputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: differences-in-not-valid-files
           path: BrokenSVG
           if-no-files-found: ignore
 
       - name: Store Problematic Images for not valid inputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: problematic-images-in-not-valid-files
           path: ProblematicSVG
@@ -168,7 +168,7 @@ jobs:
           fi
 
       - name: Find Comment
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
         id: fc
         with:
           issue-number: ${{ github.event.pull_request.number }}
